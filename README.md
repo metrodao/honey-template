@@ -1,6 +1,6 @@
-# Karma Template
+# Honey Template
 
-Aragon DAO Template for [KarmaDAO](https://karmadao.webflow.io)
+Aragon DAO Template for continuous issuance and bottom up fund allocation. Used as the base for Honey, 1Hive's community currency. 
 
 ## Local deployment
 
