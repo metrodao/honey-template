@@ -1,11 +1,11 @@
 {
   "environments": {
     "devnet": {
-      "appName": "karma-template.aragonpm.eth",
+      "appName": "honey-pot-template.aragonpm.eth",
       "address": "0x9b321667c89cf888785413b89178b78dc67747c8",
       "network": "devnet",
       "registry": "0xaafca6b0c89521752e559650206d7c925fd0e530"
     }
   },
-  "path": "contracts/KarmaTemplate.sol"
+  "path": "contracts/HoneyPotTemplate.sol"
 }

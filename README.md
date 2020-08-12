@@ -14,7 +14,7 @@ This template depends on a number of yet to be published apps, so to develop loc
 
 ## Rinkeby deployment using previously deployed template
 
-To deploy a Karma DAO to Rinkeby:
+To deploy a Honey Pot DAO to Rinkeby:
 
 1) Install dependencies:
 ```

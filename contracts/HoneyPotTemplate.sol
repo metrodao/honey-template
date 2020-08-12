@@ -8,29 +8,28 @@ import {ITollgate as Tollgate} from "./external/ITollgate.sol";
 import {IConvictionVoting as ConvictionVoting} from "./external/IConvictionVoting.sol";
 
 
-contract KarmaTemplate is BaseTemplate {
+contract HoneyPotTemplate is BaseTemplate {
 
     string constant private ERROR_MISSING_MEMBERS = "MISSING_MEMBERS";
     string constant private ERROR_BAD_VOTE_SETTINGS = "BAD_SETTINGS";
     string constant private ERROR_NO_CACHE = "NO_CACHE";
     string constant private ERROR_NO_TOLLGATE_TOKEN = "NO_TOLLGATE_TOKEN";
 
-    //
-    // bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-dandelion-voting")));
-    // bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-dependency")));
-    // bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
-    // bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
-    // bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("tollgate")));
+    // rinkeby
+     bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-dandelion-voting")));
+     bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-dependency")));
+     bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
+     bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
+     bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("tollgate")));
 
     // xdai
+//    bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("dandelion-voting")));
+//    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("conviction-voting")));
+//    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("token-manager")));
+//    bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("issuance")));
+//    bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("tollgate")));
 
-    bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("dandelion-voting")));
-    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("conviction-voting")));
-    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("token-manager")));
-    bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("issuance")));
-    bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("tollgate")));
-
-
+    uint256 private constant VAULT_INITIAL_FUNDS = 1000e18;
     bool private constant TOKEN_TRANSFERABLE = true;
     uint8 private constant TOKEN_DECIMALS = uint8(18);
     uint256 private constant TOKEN_MAX_PER_ACCOUNT = uint256(-1);
@@ -47,6 +46,8 @@ contract KarmaTemplate is BaseTemplate {
         Issuance issuance;
         MiniMeToken voteToken;
     }
+
+    event Tokens(MiniMeToken stakeAndRequestToken);
 
     mapping(address => DeployedContracts) internal senderDeployedContracts;
 
@@ -90,12 +91,15 @@ contract KarmaTemplate is BaseTemplate {
         for (uint256 i = 0; i < _holders.length; i++) {
               hookedTokenManager.mint(_holders[i], _stakes[i]);
         }
+        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
         _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
         _createEvmScriptsRegistryPermissions(acl, dandelionVoting, dandelionVoting);
         _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
 
         _storeDeployedContractsTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager, voteToken);
+
+        emit Tokens(voteToken);
     }
 
     /**
@@ -108,7 +112,6 @@ contract KarmaTemplate is BaseTemplate {
         uint256 _tollgateFeeAmount,
         uint256 _issuanceRate,
         uint64[3] _convictionSettings
-
     )
         public
     {
@@ -142,7 +145,7 @@ contract KarmaTemplate is BaseTemplate {
         _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
         _createHookedTokenManagerPermissions(acl, dandelionVoting, hookedTokenManager, issuance);
 
-        // _validateId(_id);
+//         _validateId(_id);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, dandelionVoting);
         // _registerID(_id, dao);
         _deleteStoredContracts();
@@ -185,9 +188,9 @@ contract KarmaTemplate is BaseTemplate {
     function _installIssuance(Kernel _dao, HookedTokenManager _hookedTokenManager)
       internal returns (Issuance)
     {
-      Issuance issuance = Issuance(_installNonDefaultApp(_dao, ISSUANCE_APP_ID));
-      issuance.initialize(_hookedTokenManager);
-      return issuance;
+        Issuance issuance = Issuance(_installNonDefaultApp(_dao, ISSUANCE_APP_ID));
+        issuance.initialize(_hookedTokenManager);
+        return issuance;
     }
 
     function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, MiniMeToken _requestToken, uint64[3] _convictionSettings)
@@ -224,6 +227,7 @@ contract KarmaTemplate is BaseTemplate {
         internal
     {
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), _dandelionVoting);
+        _acl.createPermission(_dandelionVoting, _convictionVoting, _convictionVoting.CANCEL_PROPOSAL_ROLE(), _dandelionVoting);
     }
 
     function _createHookedTokenManagerPermissions(ACL acl, DandelionVoting dandelionVoting,HookedTokenManager hookedTokenManager, Issuance issuance) internal {

@@ -10,6 +10,7 @@
 
 # production
 /build
+/flattened_contracts
 
 # zeit now configuration
 .now

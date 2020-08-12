@@ -1,26 +1,26 @@
 {
   "environments": {
     "default": {
-      "appName": "karma-template.aragonpm.eth",
+      "appName": "honey-pot-template.aragonpm.eth",
       "registry": "0x5f6f7e8cc7346a11ca2def8f827b7a0b612c56a1",
       "network": "rpc"
     },
     "devnet": {
-      "appName": "karma-template.aragonpm.eth",
+      "appName": "honey-pot-template.aragonpm.eth",
       "network": "devnet"
     },
     "xdai": {
       "registry": "0xaafca6b0c89521752e559650206d7c925fd0e530",
       "address": "0x9b321667c89cf888785413b89178b78dc67747c8",
-      "appName": "karma-template.1hive.aragonpm.eth",
+      "appName": "honey-pot-template.1hive.aragonpm.eth",
       "network": "xdai"
     },
     "rinkeby": {
-      "appName": "karma-template.aragonpm.eth",
-      "address": "0x3f7cd12357f16220e8ab9a9ec7ef2e9e0fb6df63",
+      "appName": "honey-pot-template.aragonpm.eth",
+      "address": "0x351c3e6abb16beaddf5679b4079935d3afef98a6",
       "network": "rinkeby",
       "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D"
     }
   },
-  "path": "contracts/KarmaTemplate.sol"
+  "path": "contracts/HoneyPotTemplate.sol"
 }
