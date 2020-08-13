@@ -17,7 +17,7 @@ contract HoneyPotTemplate is BaseTemplate {
 
     // rinkeby
      bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-dandelion-voting")));
-     bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-dependency")));
+     bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-conviction-voting")));
      bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
      bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
      bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("tollgate")));
@@ -48,6 +48,7 @@ contract HoneyPotTemplate is BaseTemplate {
     }
 
     event Tokens(MiniMeToken stakeAndRequestToken);
+    event ConvictionVotingAddress(ConvictionVoting convictionVoting);
 
     mapping(address => DeployedContracts) internal senderDeployedContracts;
 
@@ -106,12 +107,12 @@ contract HoneyPotTemplate is BaseTemplate {
     * @dev Add and initialise tollgate, issuance and conviction voting
     * @param _tollgateFeeAmount The tollgate fee amount
     * @param _issuanceRate Percentage of the token's total supply that will be issued per block (expressed as a percentage of 10^18; eg. 10^16 = 1%, 10^18 = 100%)
-    * @param _convictionSettings array of conviction settings: decay, max_ratio, and weight
+    * @param _convictionSettings array of conviction settings: decay, max_ratio, weight and min_threshold_stake_percentage
     */
     function createDaoTxTwo(
         uint256 _tollgateFeeAmount,
         uint256 _issuanceRate,
-        uint64[3] _convictionSettings
+        uint64[4] _convictionSettings
     )
         public
     {
@@ -146,8 +147,8 @@ contract HoneyPotTemplate is BaseTemplate {
         _createHookedTokenManagerPermissions(acl, dandelionVoting, hookedTokenManager, issuance);
 
 //         _validateId(_id);
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, dandelionVoting);
-        // _registerID(_id, dao);
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, msg.sender);
+//         _registerID(_id, dao);
         _deleteStoredContracts();
     }
 
@@ -193,11 +194,12 @@ contract HoneyPotTemplate is BaseTemplate {
         return issuance;
     }
 
-    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, MiniMeToken _requestToken, uint64[3] _convictionSettings)
+    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, MiniMeToken _requestToken, uint64[4] _convictionSettings)
         internal returns (ConvictionVoting)
     {
         ConvictionVoting convictionVoting = ConvictionVoting(_installNonDefaultApp(_dao, CONVICTION_VOTING_APP_ID));
-        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2]);
+        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2], _convictionSettings[3]);
+        emit ConvictionVotingAddress(convictionVoting);
         return convictionVoting;
     }
 
@@ -226,6 +228,7 @@ contract HoneyPotTemplate is BaseTemplate {
     function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting, DandelionVoting _dandelionVoting)
         internal
     {
+        _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CHALLENGE_ROLE(), _dandelionVoting);
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), _dandelionVoting);
         _acl.createPermission(_dandelionVoting, _convictionVoting, _convictionVoting.CANCEL_PROPOSAL_ROLE(), _dandelionVoting);
     }

@@ -8,6 +8,8 @@ const DAO_ID_ARG = "--daoid"
 
 const primaryAccount = async () => (await web3.eth.getAccounts())[0]
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
+const getLogParameter = (receipt, log, parameter) => receipt.logs.find(x => x.event === log).args[parameter]
+
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
@@ -55,12 +57,14 @@ const DECAY= 9999799 // 48 hours halftime
 const MAX_RATIO = 1000000 // 10 percent
 const MIN_THRESHOLD = 0.01 // half a percent
 const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD / 10000000 // determine weight based on MAX_RATIO and MIN_THRESHOLD
-const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT]
+const MIN_THRESHOLD_STAKE_PERCENTAGE = 0.2 * ONE_HUNDRED_PERCENT
+const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT, MIN_THRESHOLD_STAKE_PERCENTAGE]
 
 module.exports = async (callback) => {
   try {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
 
+    console.log(`Creating DAO...`)
     const createDaoTxOneReceipt = await honeyPotTemplate.createDaoTxOne(
       ORG_TOKEN_NAME,
       ORG_TOKEN_SYMBOL,
@@ -68,17 +72,20 @@ module.exports = async (callback) => {
       STAKES,
       VOTING_SETTINGS
     );
-    console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao}
-     Token address: ${createDaoTxOneReceipt.logs.find(x => x.event === "Tokens").args.stakeAndRequestToken} 
-     Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
+    const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
+    const tokenAddress = getLogParameter(createDaoTxOneReceipt, "Tokens", "stakeAndRequestToken")
+    console.log(`Tx One Complete. 
+    DAO address: ${daoAddress} 
+    Token address: ${tokenAddress} 
+    Gas used: ${createDaoTxOneReceipt.receipt.gasUsed}`)
 
     const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
       TOLLGATE_FEE,
       ISSUANCE_RATE,
       CONVICTION_SETTINGS
     )
-    console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
-
+    const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
+    console.log(`Tx Two Complete. Conviction Voting address: ${convictionVotingProxy} Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
 
   } catch (error) {
     console.log(error)

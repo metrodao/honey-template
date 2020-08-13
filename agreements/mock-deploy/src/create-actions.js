@@ -8,25 +8,27 @@ const REQUESTED_AMOUNT = bigExp(100, 18)
 module.exports = async (options = {}) => {
   const { owner: beneficiary, agreement: { proxy: agreement }, convictionVoting: { proxy: convictionVoting } } = options
 
-  // console.log('\nSigning the agreement...')
-  // await agreement.sign()
+  if ((await agreement.getSigner(beneficiary)).mustSign) {
+    console.log('\nSigning the agreement...')
+    await agreement.sign()
+  }
 
-  console.log('\nCreating non challenged action...')
-  await newAction(beneficiary, agreement, convictionVoting, 'Proposal 1', 'Context for action 1')
+  // console.log('\nCreating non challenged action...')
+  // await newAction(beneficiary, agreement, convictionVoting, 'Proposal 1', 'Context for action 1')
 
-  console.log('\nCreating challenged action...')
-  const challengedActionId = await newAction(agreement, convictionVoting, 'Proposal 2', 'Context for action 2')
-  await challenge(agreement, challengedActionId, 'Challenge context for action 2', options)
+  // console.log('\nCreating challenged action...')
+  // const challengedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 2', 'Context for action 2')
+  // await challenge(agreement, challengedActionId, 'Challenge context for action 2', options)
 
   // console.log('\nCreating settled action...')
-  // const settledActionId = await newAction(agreement, convictionVoting, 'Context for action 3')
+  // const settledActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 3', 'Context for action 3')
   // await challenge(agreement, settledActionId, 'Challenge context for action 3', options)
   // await settle(agreement, settledActionId)
-  //
-  // console.log('\nCreating disputed action...')
-  // const disputedActionId = await newAction(agreement, convictionVoting, 'Context for action 4')
-  // await challenge(agreement, disputedActionId, 'Challenge context for action 4', options)
-  // await dispute(agreement, 4, options)
+
+  console.log('\nCreating disputed action...')
+  const disputedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
+  await challenge(agreement, disputedActionId, 'Challenge context for action 4', options)
+  await dispute(agreement, 4, options)
 }
 
 async function newAction(beneficiary, agreement, convictionVoting, title, context) {
@@ -42,6 +44,7 @@ async function challenge(agreement, actionId, context, options) {
   const { feeToken, arbitrator } = options
   const { feeAmount } = await arbitrator.getDisputeFees()
   const challenger = await getChallenger()
+  console.log("Challenger:", challenger, "Fee amount:", feeAmount.toString(), "Balance: ", (await feeToken.balanceOf(challenger)).toString())
   await approveFeeToken(feeToken, challenger, agreement.address, feeAmount)
   console.log('Challenging action')
   await agreement.challengeAction(actionId, 0, true, utf8ToHex(context), { from: challenger })
@@ -59,15 +62,20 @@ async function dispute(agreement, actionId, options) {
   const { feeToken, arbitrator, owner } = options
   const { feeAmount } = await arbitrator.getDisputeFees()
   await approveFeeToken(feeToken, owner, agreement.address, feeAmount)
+  console.log("Disputing action...")
   await agreement.disputeAction(actionId, true)
   console.log(`Disputing action ID ${actionId}`)
 }
 
 async function approveFeeToken(token, from, to, amount) {
   const allowance = await token.allowance(from, to)
-  if (allowance.gt(bn(0))) await token.approve(to, 0, { from })
+  if (allowance.gt(bn(0))) {
+    console.log("Removing previous approval...")
+    await token.approve(to, 0, { from })
+    console.log("Removed previous approval")
+  }
   const newAllowance = amount.add(allowance)
-  await token.generateTokens(from, amount)
+  // await token.generateTokens(from, amount)
   return token.approve(to, newAllowance, { from })
 }
 
