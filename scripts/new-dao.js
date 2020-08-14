@@ -1,15 +1,15 @@
+const fs = require('fs')
+const path = require("path");
 const HoneyPotTemplate = artifacts.require("HoneyPotTemplate")
-const Token = artifacts.require("Token")
 
+const CONFIG_FILE_PATH = '../agreements/mock-deploy/rinkeby-config.json'
 const DAO_ID = "honey-pot" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
 const TOKEN_OWNER = "0xdf456B614fE9FF1C7c0B380330Da29C96d40FB02"
 const NETWORK_ARG = "--network"
 const DAO_ID_ARG = "--daoid"
 
-const primaryAccount = async () => (await web3.eth.getAccounts())[0]
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
 const getLogParameter = (receipt, log, parameter) => receipt.logs.find(x => x.event === log).args[parameter]
-
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
@@ -74,9 +74,9 @@ module.exports = async (callback) => {
     );
     const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
     const tokenAddress = getLogParameter(createDaoTxOneReceipt, "Tokens", "stakeAndRequestToken")
-    console.log(`Tx One Complete. 
-    DAO address: ${daoAddress} 
-    Token address: ${tokenAddress} 
+    console.log(`Tx One Complete.
+    DAO address: ${daoAddress}
+    Token address: ${tokenAddress}
     Gas used: ${createDaoTxOneReceipt.receipt.gasUsed}`)
 
     const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
@@ -86,6 +86,10 @@ module.exports = async (callback) => {
     )
     const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
     console.log(`Tx Two Complete. Conviction Voting address: ${convictionVotingProxy} Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
+
+    const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+    const newConfig = { ...currentConfig, daoAddress, convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy }}
+    fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
 
   } catch (error) {
     console.log(error)

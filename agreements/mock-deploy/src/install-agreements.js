@@ -1,7 +1,8 @@
+const fs = require('fs')
+const path = require('path')
 const { getInstalledApp } = require('@aragon/contract-helpers-test/src/aragon-os')
-const { bigExp, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
-const FEE_TOKEN_BALANCE = bigExp(100, 18)
+const CONFIG_FILE_PATH = '../rinkeby-config.json'
 
 module.exports = async (options = {}) => {
   const agreement = await installAgreement(options)
@@ -11,11 +12,6 @@ module.exports = async (options = {}) => {
 
 async function installAgreement(options) {
   const { owner, acl, dao, agreement: { base, appId, title, content, proxy }, arbitrator, stakingFactory, aragonAppFeesCashier } = options
-
-  if (proxy) {
-    console.log('Argreement already installed')
-    return proxy
-  }
 
   console.log(`\nInstalling Agreement app...`)
   const receipt = await dao.newAppInstance(appId, base.address, '0x', false, { from: owner })
@@ -27,6 +23,11 @@ async function installAgreement(options) {
   console.log(`Initializing Agreement app...`)
   await agreement.initialize(title, content, arbitrator.address, aragonAppFeesCashier.address, stakingFactory.address)
   console.log(`Agreement proxy: ${agreement.address}`)
+
+  const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+  const newConfig = { ...currentConfig, agreement: { ...currentConfig.agreement, proxy: agreement.address }}
+  fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
+
   return agreement
 }
 
