@@ -32,7 +32,7 @@ module.exports = async (options = {}) => {
   await payCourtFees(arbitrator, agreement, feeToken)
   const disputedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
   await challenge(agreement, disputedActionId, 'Challenge context for action 4', options)
-  await dispute(agreement, 4, options)
+  await dispute(agreement, disputedActionId, options)
 }
 
 async function newAction(beneficiary, agreement, convictionVoting, title, context) {

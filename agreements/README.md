@@ -19,13 +19,13 @@ $ npx truffle compile
 
 3) Configure the Honey Pot DAO in: `scripts/new-dao.js`
 
-4) Deploy a DAO to Rinkeby in the root folder (requires a Rinkeby account accessible by the truffle script as documented here:
+4) Deploy a DAO to Rinkeby. Execute in the root folder (requires a Rinkeby account accessible by the truffle script as documented here:
 https://hack.aragon.org/docs/cli-intro#set-a-private-key):
 ```
 $ npx truffle exec scripts/new-dao.js --network rinkeby
 ```
 
-5) Install agreements and create mock proposals in the `/agreements` folder:
+5) Install agreements and create mock proposals. Execute in the `/agreements` folder:
 ```
 $ npx truffle exec mock-deploy/rinkeby.js --network rinkeby
 ```
