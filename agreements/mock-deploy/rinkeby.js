@@ -42,8 +42,6 @@ async function loadConfig(config) {
   options.agreement.proxy = await instanceOrEmpty(options.agreement.proxy, 'Agreement')
   options.feeToken = await getInstance('MiniMeToken', options.feeToken)
   options.arbitrator = await getInstance('IArbitratorCustom', options.arbitrator)
-  options.stakingFactory = await getInstance('StakingFactory', options.stakingFactory)
-  options.aragonAppFeesCashier = { address: options.appFeesCashier }
   options.agreement.content = utf8ToHex(options.agreement.content)
 
   return options

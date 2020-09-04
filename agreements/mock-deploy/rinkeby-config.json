@@ -1,17 +1,17 @@
 {
-  "daoAddress": "0xeac000b64fc11a9ce6d885fe91fb4f9c2359cc21",
+  "daoAddress": "0xe2235667e59424d6223986f793829e8099138e6d",
   "convictionVoting": {
-    "proxy": "0x999e3d969f1e858b6bceb11429a4fbd24e20db3b"
+    "proxy": "0x3e1c7575ba72378394e62282c2c588d790df2bd9"
   },
   "arbitrator": "0x52180af656a1923024d1accf1d827ab85ce48878",
   "stakingFactory": "0x07429001eeA415E967C57B8d43484233d57F8b0B",
-  "appFeesCashier": "0x0000000000000000000000000000000000000000",
+  "setFeesCashier": false,
   "feeToken": "0x3af6b2f907f0c55f279e0ed65751984e6cdc4a42",
   "agreement": {
-    "base": "0xAC7bA031E2A598A01d823aa96fB25b6662721de6",
-    "proxy": "0xc13C5E6c5bEa2dEaC302eD14f74F96B0c2fd105B",
-    "appId": "0x34c62f3aec3073826f39c2c35e9a1297d9dbf3cc77472283106f09eee9cf47bf",
-    "title": "Agreement Test v3",
-    "content": "ipfs:QmdLu3XXT9uUYxqDKXXsTYG77qNYNPbhzL27ZYT9kErqcZ"
+    "base": "0x90d878b0C7E5d72D15bDF76B79D1B0C8EacbC38c",
+    "proxy": "0x86c8c4726164a4AF36EA6f2a3Bc26351C8116911",
+    "appId": "0x15a969a0e134d745b604fb43f699bb5c146424792084c198d53050c4d08126d1",
+    "title": "Aragon Network Cash Agreement",
+    "content": "ipfs:QmPvfWUNt3WrZ7uaB1ZwEmec3Zr1ABL9CncSDfQypWkmnp"
   }
 }

@@ -11,7 +11,7 @@ module.exports = async (options = {}) => {
 }
 
 async function installAgreement(options) {
-  const { owner, acl, dao, agreement: { base, appId, title, content, proxy }, arbitrator, stakingFactory, aragonAppFeesCashier } = options
+  const { owner, acl, dao, agreement: { base, appId, title, content }, arbitrator, stakingFactory, setFeesCashier } = options
 
   console.log(`\nInstalling Agreement app...`)
   const receipt = await dao.newAppInstance(appId, base.address, '0x', false, { from: owner })
@@ -21,7 +21,7 @@ async function installAgreement(options) {
   await createPermissions(acl, agreement, ['CHANGE_AGREEMENT_ROLE', 'MANAGE_DISPUTABLE_ROLE'], owner)
 
   console.log(`Initializing Agreement app...`)
-  await agreement.initialize(title, content, arbitrator.address, aragonAppFeesCashier.address, stakingFactory.address)
+  await agreement.initialize(arbitrator.address, setFeesCashier, title, content, stakingFactory)
   console.log(`Agreement proxy: ${agreement.address}`)
 
   const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
@@ -43,7 +43,7 @@ async function activateVoting(agreement, options) {
   await createPermissions(acl, proxy, ['SET_AGREEMENT_ROLE'], agreement.address, owner)
 
   console.log(`Activating ConvictionVoting app with Agreement...`)
-  await agreement.activate(proxy.address, feeToken.address, actionCollateral, challengeCollateral, challengeDuration, { from: owner })
+  await agreement.activate(proxy.address, feeToken.address, challengeDuration, actionCollateral, challengeCollateral, { from: owner })
   console.log(`ConvictionVoting app activated!`)
 }
 

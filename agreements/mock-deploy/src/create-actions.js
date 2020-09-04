@@ -13,7 +13,8 @@ module.exports = async (options = {}) => {
 
   if ((await agreement.getSigner(beneficiary)).mustSign) {
     console.log('\nSigning the agreement...')
-    await agreement.sign()
+    const currentSettingId = await agreement.getCurrentSettingId()
+    await agreement.sign(currentSettingId)
   }
 
   console.log('\nCreating non challenged action...')
@@ -25,14 +26,14 @@ module.exports = async (options = {}) => {
 
   console.log('\nCreating settled action...')
   const settledActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 3', 'Context for action 3')
-  await challenge(agreement, settledActionId, 'Challenge context for action 3', options)
+  await challenge(agreement, settledActionId, 'Challenge context for action 3', options, convictionVoting)
   await settle(agreement, settledActionId)
 
   console.log('\nCreating disputed action...')
   await payCourtFees(arbitrator, agreement, feeToken)
   const disputedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
   await challenge(agreement, disputedActionId, 'Challenge context for action 4', options)
-  await dispute(agreement, disputedActionId, options)
+  await dispute(agreement, disputedActionId, options, convictionVoting)
 }
 
 async function newAction(beneficiary, agreement, convictionVoting, title, context) {
@@ -43,11 +44,21 @@ async function newAction(beneficiary, agreement, convictionVoting, title, contex
   return actionId
 }
 
-async function challenge(agreement, actionId, context, options) {
+async function challenge(agreement, actionId, context, options, convictionVoting) {
   console.log('Approving dispute fees from challenger...')
   const { feeToken, arbitrator } = options
   const { feeAmount } = await arbitrator.getDisputeFees()
   const challenger = await getChallenger()
+
+  // const { currentCollateralRequirementId } = await agreement.getDisputableInfo(convictionVoting.address)
+  // const { collateralToken: collateralTokenAddress, challengeAmount } =
+  //     await agreement.getCollateralRequirement(convictionVoting.address, currentCollateralRequirementId)
+  // console.log("Fee token address", feeToken.address)
+  // const collateralToken = await getArtifacts().require("ERC20").at(collateralTokenAddress)
+  // console.log("Collateral Token:", collateralTokenAddress,
+  //     "Challange Amount:", challengeAmount.toString(),
+  //     "Balance: ", (await collateralToken.balanceOf(challenger)).toString())
+
   console.log("Challenger:", challenger, "Fee amount:", feeAmount.toString(), "Balance: ", (await feeToken.balanceOf(challenger)).toString())
   await approveFeeToken(feeToken, challenger, agreement.address, feeAmount)
   console.log('Challenging action')
@@ -74,6 +85,12 @@ const payCourtFees = async (arbitrator, agreement, feeToken) => {
 
 async function dispute(agreement, actionId, options) {
   console.log('Approving dispute fees from submitter')
+
+  const { lastChallengeId, lastChallengeActive } = await agreement.getAction(actionId)
+  console.log("Last challenge active", lastChallengeActive.toString())
+  const { endDate } = await agreement.getChallenge(lastChallengeId)
+  console.log("End date:", endDate.toString(), "Timestamp:",  (await getWeb3().eth.getBlock("latest")).timestamp )
+
   const { feeToken, arbitrator, owner } = options
   const { feeAmount } = await arbitrator.getDisputeFees()
   await approveFeeToken(feeToken, owner, agreement.address, feeAmount)

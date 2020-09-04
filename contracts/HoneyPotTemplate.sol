@@ -230,7 +230,8 @@ contract HoneyPotTemplate is BaseTemplate {
     {
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CHALLENGE_ROLE(), _dandelionVoting);
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), _dandelionVoting);
-        _acl.createPermission(_dandelionVoting, _convictionVoting, _convictionVoting.CANCEL_PROPOSAL_ROLE(), _dandelionVoting);
+        _acl.createPermission(_dandelionVoting, _convictionVoting, _convictionVoting.CANCEL_PROPOSALS_ROLE(), _dandelionVoting);
+        _acl.createPermission(_dandelionVoting, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), _dandelionVoting);
     }
 
     function _createHookedTokenManagerPermissions(ACL acl, DandelionVoting dandelionVoting,HookedTokenManager hookedTokenManager, Issuance issuance) internal {
