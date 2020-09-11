@@ -30,7 +30,7 @@ module.exports = async (options = {}) => {
   await settle(agreement, settledActionId)
 
   console.log('\nCreating disputed action...')
-  await payCourtFees(arbitrator, agreement, feeToken)
+  await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
   const disputedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
   await challenge(agreement, disputedActionId, 'Challenge context for action 4', options)
   await dispute(agreement, disputedActionId, options, convictionVoting)
@@ -72,13 +72,13 @@ async function settle(agreement, actionId) {
   console.log(`Settled action ID ${actionId}`)
 }
 
-const payCourtFees = async (arbitrator, agreement, feeToken) => {
+const payCourtFees = async (arbitrator, agreement, feeToken, owner) => {
   const periods = bn(1)
   const subscriptionsAddress = await arbitrator.getSubscriptions()
   const subscriptions = await getInstance('ISubscriptions', subscriptionsAddress)
   const { amountToPay } = await subscriptions.getPayFeesDetails(agreement.address, periods)
   console.log(`Amount to pay: ${amountToPay.toString()} Approving fees payment...`)
-  await feeToken.approve(subscriptionsAddress, amountToPay)
+  await approveFeeToken(feeToken, owner, subscriptionsAddress, amountToPay)
   console.log(`Paying court fees...`)
   await subscriptions.payFees(agreement.address, periods)
 }
