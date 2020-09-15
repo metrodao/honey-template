@@ -16,7 +16,7 @@
       "network": "xdai"
     },
     "rinkeby": {
-      "appName": "karma-template.aragonpm.eth",
+      "appName": "honey-template.open.aragonpm.eth",
       "address": "0x3f7cd12357f16220e8ab9a9ec7ef2e9e0fb6df63",
       "network": "rinkeby",
       "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D"

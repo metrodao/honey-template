@@ -1,6 +1,6 @@
 const deployTemplate = require('@aragon/templates-shared/scripts/deploy-template')
 
-const TEMPLATE_NAME = 'karma-template'
+const TEMPLATE_NAME = 'honey-template'
 const CONTRACT_NAME = 'KarmaTemplate'
 
 module.exports = (callback) => {
