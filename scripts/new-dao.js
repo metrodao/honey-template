@@ -52,7 +52,7 @@ const ISSUANCE_RATE = 60e18 / BLOCKS_PER_YEAR // per Block Inflation Rate
 // const DECAY = 9999599 // 3 days halftime. halftime_alpha = (1/2)**(1/t)
 const DECAY= 9999799 // 48 hours halftime
 const MAX_RATIO = 1000000 // 10 percent
-const MIN_THRESHOLD = 0.01 // half a percent
+const MIN_THRESHOLD = 0.01 // one percent
 const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD / 10000000 // determine weight based on MAX_RATIO and MIN_THRESHOLD
 const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT]
 
