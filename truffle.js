@@ -98,15 +98,10 @@ module.exports = {
     },
   },
   build: {},
-  compilers: {
-    solc: {
-      version: "0.4.24",
-      settings: {
-        optimizer: {
-          enabled: true,
-          runs: 1
-        }
-      }
+  solc: {
+    optimizer: {
+      enabled: true,
+      runs: 1,
     }
   }
 }

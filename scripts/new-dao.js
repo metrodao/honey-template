@@ -53,7 +53,7 @@ const TOLLGATE_FEE = ONE_TOKEN * 100
 const BLOCKS_PER_YEAR = 31557600 / 5 // seeconds per year divided by 15 (assumes 15 second average block time)
 const ISSUANCE_RATE = 60e18 / BLOCKS_PER_YEAR // per Block Inflation Rate
 // const DECAY = 9999599 // 3 days halftime. halftime_alpha = (1/2)**(1/t)
-const DECAY= 9999799 // 48 hours halftime
+const DECAY = 9999799 // 48 hours halftime
 const MAX_RATIO = 1000000 // 10 percent
 const MIN_THRESHOLD = 0.01 // half a percent
 const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD / 10000000 // determine weight based on MAX_RATIO and MIN_THRESHOLD
@@ -72,23 +72,37 @@ module.exports = async (callback) => {
       STAKES,
       VOTING_SETTINGS
     );
+
     const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
     const tokenAddress = getLogParameter(createDaoTxOneReceipt, "Tokens", "stakeAndRequestToken")
+    const agentAddress = getLogParameter(createDaoTxOneReceipt, "AgentAddress", "agentAddress")
+    const brightIdRegisterAddress = getLogParameter(createDaoTxOneReceipt, "BrightIdRegisterAddress", "brightIdRegister")
     console.log(`Tx One Complete.
-    DAO address: ${daoAddress}
-    Token address: ${tokenAddress}
-    Gas used: ${createDaoTxOneReceipt.receipt.gasUsed}`)
+    DAO address: ${ daoAddress }
+    Token address: ${ tokenAddress }
+    Agent address: ${ agentAddress }
+    BrightId Register address: ${ brightIdRegisterAddress }
+    Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
 
     const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
       TOLLGATE_FEE,
       ISSUANCE_RATE,
       CONVICTION_SETTINGS
     )
+
     const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
-    console.log(`Tx Two Complete. Conviction Voting address: ${convictionVotingProxy} Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
+    console.log(`Tx Two Complete. 
+    Conviction Voting address: ${ convictionVotingProxy } 
+    Gas used: ${ createDaoTxTwoReceipt.receipt.gasUsed }`)
 
     const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
-    const newConfig = { ...currentConfig, daoAddress, convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy }}
+    const newConfig = {
+      ...currentConfig,
+      daoAddress,
+      brightIdRegisterAddress,
+      agentAddress,
+      convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy }
+    }
     fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
 
   } catch (error) {

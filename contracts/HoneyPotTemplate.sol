@@ -6,7 +6,7 @@ import "@1hive/apps-token-manager/contracts/HookedTokenManager.sol";
 import {IIssuance as Issuance} from "./external/IIssuance.sol";
 import {ITollgate as Tollgate} from "./external/ITollgate.sol";
 import {IConvictionVoting as ConvictionVoting} from "./external/IConvictionVoting.sol";
-
+import "@1hive/apps-brightid-register/contracts/BrightIdRegister.sol";
 
 contract HoneyPotTemplate is BaseTemplate {
 
@@ -21,6 +21,7 @@ contract HoneyPotTemplate is BaseTemplate {
      bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
      bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
      bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("tollgate")));
+     bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register")));
 
     // xdai
 //    bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("dandelion-voting")));
@@ -49,6 +50,8 @@ contract HoneyPotTemplate is BaseTemplate {
 
     event Tokens(MiniMeToken stakeAndRequestToken);
     event ConvictionVotingAddress(ConvictionVoting convictionVoting);
+    event BrightIdRegisterAddress(BrightIdRegister brightIdRegister);
+    event AgentAddress(Agent agentAddress);
 
     mapping(address => DeployedContracts) internal senderDeployedContracts;
 
@@ -85,8 +88,10 @@ contract HoneyPotTemplate is BaseTemplate {
         (Kernel dao, ACL acl) = _createDAO();
         MiniMeToken voteToken = _createToken(_voteTokenName, _voteTokenSymbol, TOKEN_DECIMALS);
         Vault fundingPoolVault = _installVaultApp(dao);
+        Agent agent = _installDefaultAgentApp(dao);
         DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
+        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, dandelionVoting);
 
         _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
         for (uint256 i = 0; i < _holders.length; i++) {
@@ -95,12 +100,14 @@ contract HoneyPotTemplate is BaseTemplate {
         hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
         _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
+        _createAgentPermissions(acl, agent, ANY_ENTITY, dandelionVoting);
         _createEvmScriptsRegistryPermissions(acl, dandelionVoting, dandelionVoting);
         _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
 
         _storeDeployedContractsTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager, voteToken);
 
         emit Tokens(voteToken);
+        emit AgentAddress(agent);
     }
 
     /**
@@ -201,6 +208,19 @@ contract HoneyPotTemplate is BaseTemplate {
         convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2], _convictionSettings[3]);
         emit ConvictionVotingAddress(convictionVoting);
         return convictionVoting;
+    }
+
+    function _installBrightIdRegister(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting)
+        internal returns (BrightIdRegister)
+    {
+        BrightIdRegister brightIdRegister = BrightIdRegister(_installNonDefaultApp(_dao, BRIGHTID_REGISTER_APP_ID));
+        bytes32 context1hive = 0x3168697665000000000000000000000000000000000000000000000000000000;
+        address verifierAddress = 0xead9c93b79ae7c1591b1fb5323bd777e86e150d4;
+        brightIdRegister.initialize(context1hive, verifierAddress, 60 days, 1 days);
+        emit BrightIdRegisterAddress(brightIdRegister);
+
+        _acl.createPermission(ANY_ENTITY, brightIdRegister, brightIdRegister.UPDATE_SETTINGS_ROLE(), _dandelionVoting);
+        return brightIdRegister;
     }
 
     // Permission setting functions //

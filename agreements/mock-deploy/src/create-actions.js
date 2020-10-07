@@ -6,7 +6,8 @@ const { bn, bigExp, getEventArgument } = require('@aragon/contract-helpers-test'
 const REQUESTED_AMOUNT = bigExp(100, 18)
 
 module.exports = async (options = {}) => {
-  const { owner: beneficiary, arbitrator, feeToken,
+  const {
+    owner: beneficiary, arbitrator, feeToken,
     agreement: { proxy: agreement },
     convictionVoting: { proxy: convictionVoting }
   } = options
@@ -22,7 +23,7 @@ module.exports = async (options = {}) => {
 
   console.log('\nCreating challenged action...')
   const challengedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 2', 'Context for action 2')
-  await challenge(agreement, challengedActionId, 'Challenge context for action 2', options)
+  await challenge(agreement, challengedActionId, 'Challenge context for action 2', options, convictionVoting)
 
   console.log('\nCreating settled action...')
   const settledActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 3', 'Context for action 3')
@@ -30,9 +31,9 @@ module.exports = async (options = {}) => {
   await settle(agreement, settledActionId)
 
   console.log('\nCreating disputed action...')
-  await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
+  // await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
   const disputedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
-  await challenge(agreement, disputedActionId, 'Challenge context for action 4', options)
+  await challenge(agreement, disputedActionId, 'Challenge context for action 4', options, convictionVoting)
   await dispute(agreement, disputedActionId, options, convictionVoting)
 }
 
@@ -40,7 +41,7 @@ async function newAction(beneficiary, agreement, convictionVoting, title, contex
   console.log('Creating action/proposal...')
   const addProposalReceipt = await convictionVoting.addProposal(title, utf8ToHex(context), REQUESTED_AMOUNT, beneficiary)
   const actionId = getEventArgument(addProposalReceipt, 'ActionSubmitted', 'actionId', { decodeForAbi: agreement.abi })
-  console.log(`Created action ID ${actionId}`)
+  console.log(`Created action ID ${ actionId }`)
   return actionId
 }
 
@@ -50,26 +51,27 @@ async function challenge(agreement, actionId, context, options, convictionVoting
   const { feeAmount } = await arbitrator.getDisputeFees()
   const challenger = await getChallenger()
 
-  // const { currentCollateralRequirementId } = await agreement.getDisputableInfo(convictionVoting.address)
-  // const { collateralToken: collateralTokenAddress, challengeAmount } =
-  //     await agreement.getCollateralRequirement(convictionVoting.address, currentCollateralRequirementId)
-  // console.log("Fee token address", feeToken.address)
-  // const collateralToken = await getArtifacts().require("ERC20").at(collateralTokenAddress)
-  // console.log("Collateral Token:", collateralTokenAddress,
-  //     "Challange Amount:", challengeAmount.toString(),
-  //     "Balance: ", (await collateralToken.balanceOf(challenger)).toString())
+  const { currentCollateralRequirementId } = await agreement.getDisputableInfo(convictionVoting.address)
+  const { collateralToken: collateralTokenAddress, challengeAmount } = await agreement.getCollateralRequirement(convictionVoting.address, currentCollateralRequirementId)
+  console.log("Fee token address", feeToken.address)
+  const collateralToken = await getArtifacts().require("ERC20").at(collateralTokenAddress)
+  console.log(
+    "Collateral Token:", collateralTokenAddress,
+    "Challange Amount:", challengeAmount.toString(),
+    "Balance: ", (await collateralToken.balanceOf(challenger)).toString()
+  )
 
   console.log("Challenger:", challenger, "Fee amount:", feeAmount.toString(), "Balance: ", (await feeToken.balanceOf(challenger)).toString())
   await approveFeeToken(feeToken, challenger, agreement.address, feeAmount)
   console.log('Challenging action')
   await agreement.challengeAction(actionId, 0, true, utf8ToHex(context), { from: challenger })
-  console.log(`Challenged action ID ${actionId}`)
+  console.log(`Challenged action ID ${ actionId }`)
 }
 
 async function settle(agreement, actionId) {
   console.log('Settling action')
   await agreement.settleAction(actionId)
-  console.log(`Settled action ID ${actionId}`)
+  console.log(`Settled action ID ${ actionId }`)
 }
 
 const payCourtFees = async (arbitrator, agreement, feeToken, owner) => {
@@ -77,7 +79,7 @@ const payCourtFees = async (arbitrator, agreement, feeToken, owner) => {
   const subscriptionsAddress = await arbitrator.getSubscriptions()
   const subscriptions = await getInstance('ISubscriptions', subscriptionsAddress)
   const { amountToPay } = await subscriptions.getPayFeesDetails(agreement.address, periods)
-  console.log(`Amount to pay: ${amountToPay.toString()} Approving fees payment...`)
+  console.log(`Amount to pay: ${ amountToPay.toString() } Approving fees payment...`)
   await approveFeeToken(feeToken, owner, subscriptionsAddress, amountToPay)
   console.log(`Paying court fees...`)
   await subscriptions.payFees(agreement.address, periods)
@@ -89,14 +91,14 @@ async function dispute(agreement, actionId, options) {
   const { lastChallengeId, lastChallengeActive } = await agreement.getAction(actionId)
   console.log("Last challenge active", lastChallengeActive.toString())
   const { endDate } = await agreement.getChallenge(lastChallengeId)
-  console.log("End date:", endDate.toString(), "Timestamp:",  (await getWeb3().eth.getBlock("latest")).timestamp )
+  console.log("End date:", endDate.toString(), "Timestamp:", (await getWeb3().eth.getBlock("latest")).timestamp)
 
   const { feeToken, arbitrator, owner } = options
   const { feeAmount } = await arbitrator.getDisputeFees()
   await approveFeeToken(feeToken, owner, agreement.address, feeAmount)
   console.log("Disputing action...")
   await agreement.disputeAction(actionId, true)
-  console.log(`Disputing action ID ${actionId}`)
+  console.log(`Disputing action ID ${ actionId }`)
 }
 
 async function approveFeeToken(token, from, to, amount) {
