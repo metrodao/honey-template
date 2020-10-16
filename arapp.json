@@ -17,7 +17,7 @@
     },
     "rinkeby": {
       "appName": "honey-pot-template.aragonpm.eth",
-      "address": "0x47247af60db21b3037ca03b7653a4f8bfbb00600",
+      "address": "0xcead2097a2dadceaac37aeee343cd9e7f5d15686",
       "network": "rinkeby",
       "registry": "0x98Df287B6C145399Aaa709692c8D308357bC085D"
     }

@@ -3,6 +3,8 @@ const path = require("path");
 const HoneyPotTemplate = artifacts.require("HoneyPotTemplate")
 const MiniMeToken = artifacts.require("MiniMeToken")
 
+const { pct16, bn, getEventArgument, ONE_DAY } = require('@aragon/contract-helpers-test')
+
 const FROM_ACCOUNT = "0xdf456B614fE9FF1C7c0B380330Da29C96d40FB02"
 const CONFIG_FILE_PATH = '../mock-actions/src/rinkeby-config.json'
 const DAO_ID = "honey-pot" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
@@ -43,22 +45,23 @@ const getAccount = async () => {
   return (await web3.eth.getAccounts())[0]
 }
 
-const DAYS = 24 * 60 * 60
 const ONE_HUNDRED_PERCENT = 1e18
 const ONE_TOKEN = 1e18
 
 // Create dao transaction one config
-const SUPPORT_REQUIRED = 0.5 * ONE_HUNDRED_PERCENT
-const MIN_ACCEPTANCE_QUORUM = 0.1 * ONE_HUNDRED_PERCENT
-const VOTE_DURATION_BLOCKS = 241920 // ~14 days
-const VOTE_BUFFER_BLOCKS = 5760 // 8 hours
-const VOTE_EXECUTION_DELAY_BLOCKS = 34560 // 48 hours
-const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION_BLOCKS, VOTE_BUFFER_BLOCKS, VOTE_EXECUTION_DELAY_BLOCKS]
+const VOTE_DURATION = ONE_DAY * 5
+const VOTE_SUPPORT_REQUIRED = pct16(50)
+const VOTE_MIN_ACCEPTANCE_QUORUM =  pct16(10)
+const VOTE_DELEGATED_VOTING_PERIOD = ONE_DAY * 2
+const VOTE_QUIET_ENDING_PERIOD = ONE_DAY
+const VOTE_QUIET_ENDING_EXTENSION = ONE_DAY / 2
+const VOTE_EXECUTION_DELAY = 1000
+const VOTING_SETTINGS = [VOTE_DURATION, VOTE_SUPPORT_REQUIRED, VOTE_MIN_ACCEPTANCE_QUORUM,
+  VOTE_DELEGATED_VOTING_PERIOD, VOTE_QUIET_ENDING_PERIOD, VOTE_QUIET_ENDING_EXTENSION, VOTE_EXECUTION_DELAY]
 const BRIGHTID_1HIVE_CONTEXT = "0x3168697665000000000000000000000000000000000000000000000000000000"
 const BRIGHTID_VERIFIER_ADDRESS = "0xead9c93b79ae7c1591b1fb5323bd777e86e150d4";
 
 // Create dao transaction two config
-const TOLLGATE_FEE = ONE_TOKEN * 100
 const BLOCKS_PER_YEAR = 31557600 / 5 // seeconds per year divided by 15 (assumes 15 second average block time)
 const ISSUANCE_RATE = 60e18 / BLOCKS_PER_YEAR // per Block Inflation Rate
 const DECAY = 9999799 // 48 hours halftime. 9999599 = 3 days halftime. halftime_alpha = (1/2)**(1/t)
@@ -72,7 +75,7 @@ const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT, MIN_THRESHOLD_STAKE_PERCE
 const SET_APP_FEES_CASHIER = false
 const AGREEMENT_TITLE = "1Hive Network Agreement"
 const AGREEMENT_CONTENT = "ipfs:QmPvfWUNt3WrZ7uaB1ZwEmec3Zr1ABL9CncSDfQypWkmnp" // Copied from Aragon Network, not 1hive related
-const CHALLENGE_DURATION = 3 * DAYS
+const CHALLENGE_DURATION = 3 * ONE_DAY
 const ACTION_AMOUNT = 0
 const CHALLENGE_AMOUNT = 0
 const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
