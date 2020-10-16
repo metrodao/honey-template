@@ -180,9 +180,12 @@ contract HoneyPotTemplate is BaseTemplate {
 
         Agreement agreement = _installAgreementApp(dao, _arbitrator, _setAppFeesCashier, _title, _content, _stakingFactory);
         _createAgreementPermissions(acl, agreement, disputableVoting, disputableVoting);
+        acl.createPermission(agreement, disputableVoting, disputableVoting.SET_AGREEMENT_ROLE(), disputableVoting);
         acl.createPermission(agreement, convictionVoting, convictionVoting.SET_AGREEMENT_ROLE(), disputableVoting);
 
+        agreement.activate(disputableVoting, _feeToken, _challengeDuration, _convictionVotingFees[0], _convictionVotingFees[1]);
         agreement.activate(convictionVoting, _feeToken, _challengeDuration, _convictionVotingFees[0], _convictionVotingFees[1]);
+        _removePermissionFromTemplate(acl, agreement, agreement.MANAGE_DISPUTABLE_ROLE());
 
 //        _validateId(_id);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, msg.sender);
