@@ -7,6 +7,7 @@ import {IIssuance as Issuance} from "./external/IIssuance.sol";
 import {ITollgate as Tollgate} from "./external/ITollgate.sol";
 import {IConvictionVoting as ConvictionVoting} from "./external/IConvictionVoting.sol";
 import "@1hive/apps-brightid-register/contracts/BrightIdRegister.sol";
+import "./external/Agreement.sol";
 
 contract HoneyPotTemplate is BaseTemplate {
 
@@ -22,6 +23,8 @@ contract HoneyPotTemplate is BaseTemplate {
      bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
      bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("tollgate")));
      bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register")));
+     bytes32 private constant AGREEMENT_APP_ID = 0x41dd0b999b443a19321f2f34fe8078d1af95a1487b49af4c2ca57fb9e3e5331e; // agreement-1hive.open.aragonpm.eth
+     bytes32 private constant DISPUTABLE_VOTING_APP_ID = 0x39aa9e500efe56efda203714d12c78959ecbf71223162614ab5b56eaba014145; // probably disputable-voting.open.aragonpm.eth
 
     // xdai
 //    bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("dandelion-voting")));
@@ -46,18 +49,20 @@ contract HoneyPotTemplate is BaseTemplate {
         HookedTokenManager hookedTokenManager;
         Issuance issuance;
         MiniMeToken voteToken;
+        ConvictionVoting convictionVoting;
     }
 
-    event Tokens(MiniMeToken stakeAndRequestToken);
+    event VoteToken(MiniMeToken voteToken);
+    event AgentAddress(Agent agentAddress);
+    event HookedTokenManagerAddress(HookedTokenManager hookedTokenManagerAddress);
     event ConvictionVotingAddress(ConvictionVoting convictionVoting);
     event BrightIdRegisterAddress(BrightIdRegister brightIdRegister);
-    event AgentAddress(Agent agentAddress);
+    event AgreementAddress(Agreement agreement);
 
     mapping(address => DeployedContracts) internal senderDeployedContracts;
 
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
-        BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID)
-        public
+        BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID) public
     {
         _ensureAragonIdIsValid(_aragonID);
         _ensureMiniMeFactoryIsValid(_miniMeFactory);
@@ -67,57 +72,48 @@ contract HoneyPotTemplate is BaseTemplate {
 
     /**
     * @dev Create the DAO and initialise the basic apps necessary for gardens
-    * @param _voteTokenName The name for the token used by share holders in the organization
-    * @param _voteTokenSymbol The symbol for the token used by share holders in the organization
-    * @param _holders some text for _holders
-    * @param _stakes some text for _stakes
     * @param _votingSettings Array of [supportRequired, minAcceptanceQuorum, voteDuration, voteBufferBlocks, voteExecutionDelayBlocks] to set up the voting app of the organization
-
     */
     function createDaoTxOne(
-        string _voteTokenName,
-        string _voteTokenSymbol,
-        address[] _holders,
-        uint256[] _stakes,
-        uint64[5] _votingSettings
+        MiniMeToken _voteToken,
+        uint64[5] _votingSettings,
+        bytes32 _1hiveContext,
+        address _verifierAddress
     )
-        public
+        public // Increases stack limit over using external
     {
         require(_votingSettings.length == 5, ERROR_BAD_VOTE_SETTINGS);
 
         (Kernel dao, ACL acl) = _createDAO();
-        MiniMeToken voteToken = _createToken(_voteTokenName, _voteTokenSymbol, TOKEN_DECIMALS);
         Vault fundingPoolVault = _installVaultApp(dao);
         Agent agent = _installDefaultAgentApp(dao);
-        DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
-        HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
-        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, dandelionVoting);
 
-        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-        for (uint256 i = 0; i < _holders.length; i++) {
-              hookedTokenManager.mint(_holders[i], _stakes[i]);
+        MiniMeToken voteToken = _voteToken;
+        if (_voteToken == address(0)) {
+            voteToken = _createToken("Honey", "HNY", TOKEN_DECIMALS);
+            voteToken.changeController(msg.sender);
         }
-        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
-        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+
+        DandelionVoting dandelionVoting = _installDandelionVotingApp(dao, voteToken, _votingSettings);
+        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, dandelionVoting, _1hiveContext, _verifierAddress);
+        HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
         _createAgentPermissions(acl, agent, ANY_ENTITY, dandelionVoting);
         _createEvmScriptsRegistryPermissions(acl, dandelionVoting, dandelionVoting);
-        _createCustomVotingPermissions(acl, dandelionVoting, hookedTokenManager);
+        _createCustomVotingPermissions(acl, dandelionVoting);
 
         _storeDeployedContractsTxOne(dao, acl, dandelionVoting, fundingPoolVault, hookedTokenManager, voteToken);
 
-        emit Tokens(voteToken);
+        emit VoteToken(voteToken);
         emit AgentAddress(agent);
     }
 
     /**
-    * @dev Add and initialise tollgate, issuance and conviction voting
-    * @param _tollgateFeeAmount The tollgate fee amount
+    * @dev Add and initialise issuance and conviction voting
     * @param _issuanceRate Percentage of the token's total supply that will be issued per block (expressed as a percentage of 10^18; eg. 10^16 = 1%, 10^18 = 100%)
     * @param _convictionSettings array of conviction settings: decay, max_ratio, weight and min_threshold_stake_percentage
     */
     function createDaoTxTwo(
-        uint256 _tollgateFeeAmount,
         uint256 _issuanceRate,
         uint64[4] _convictionSettings
     )
@@ -132,31 +128,69 @@ contract HoneyPotTemplate is BaseTemplate {
         HookedTokenManager hookedTokenManager,
         MiniMeToken voteToken) = _getDeployedContractsTxOne();
 
-        ERC20 feeToken = ERC20(address(voteToken));
+        // Must have set the token controller to the HookedTokenManager prior to executing this transaction
+        hookedTokenManager.initialize(voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
-        Tollgate tollgate = _installTollgate(senderDeployedContracts[msg.sender].dao, feeToken, _tollgateFeeAmount, address(fundingPoolVault));
-        _createTollgatePermissions(acl, tollgate, dandelionVoting);
+        // TODO: Remove for prod
+        // Mint some initial funds for distribution via conviction voting and for creator. Only for testing, remove for prod.
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+        hookedTokenManager.mint(msg.sender, 20000e18);
+        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
-        Issuance issuance = _installIssuance(senderDeployedContracts[msg.sender].dao, hookedTokenManager);
+        Issuance issuance = _installIssuance(dao, hookedTokenManager);
         _createPermissionForTemplate(acl, issuance, issuance.ADD_POLICY_ROLE());
         issuance.addPolicy(address(fundingPoolVault), _issuanceRate);
         _removePermissionFromTemplate(acl, issuance, issuance.ADD_POLICY_ROLE());
         _createIssuancePermissions(acl, issuance, dandelionVoting);
+        _createHookedTokenManagerPermissions(acl, dandelionVoting, hookedTokenManager, issuance);
 
-        ConvictionVoting convictionVoting = _installConvictionVoting(senderDeployedContracts[msg.sender].dao, hookedTokenManager.token(), fundingPoolVault, hookedTokenManager.token(), _convictionSettings);
-        _createVaultPermissions(acl, fundingPoolVault, convictionVoting, dandelionVoting);
+        ConvictionVoting convictionVoting = _installConvictionVoting(dao, hookedTokenManager.token(), fundingPoolVault, hookedTokenManager.token(), _convictionSettings);
         _createConvictionVotingPermissions(acl, convictionVoting, dandelionVoting);
+        _createVaultPermissions(acl, fundingPoolVault, convictionVoting, dandelionVoting);
 
         _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
         hookedTokenManager.registerHook(convictionVoting);
         hookedTokenManager.registerHook(dandelionVoting);
         _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
-        _createHookedTokenManagerPermissions(acl, dandelionVoting, hookedTokenManager, issuance);
 
-//         _validateId(_id);
+        _storeDeployedContractsTxTwo(convictionVoting);
+    }
+
+    /**
+    * @dev Add, initialise and activate the agreement
+    */
+    function createDaoTxThree(
+        address _arbitrator,
+        bool _setAppFeesCashier,
+        string _title,
+        bytes memory _content,
+        address _stakingFactory,
+        address _feeToken,
+        uint64 _challengeDuration,
+        uint256[2] _convictionVotingFees
+    )
+        public
+    {
+        require(senderDeployedContracts[msg.sender].dao != address(0), ERROR_NO_CACHE);
+
+        (Kernel dao,
+        ACL acl,
+        DandelionVoting dandelionVoting,,,) = _getDeployedContractsTxOne();
+        ConvictionVoting convictionVoting = _getDeployedContractsTxTwo();
+
+        Agreement agreement = _installAgreementApp(dao, _arbitrator, _setAppFeesCashier, _title, _content, _stakingFactory);
+        _createAgreementPermissions(acl, agreement, dandelionVoting, dandelionVoting);
+        acl.createPermission(agreement, convictionVoting, convictionVoting.SET_AGREEMENT_ROLE(), dandelionVoting);
+
+        agreement.activate(convictionVoting, _feeToken, _challengeDuration, _convictionVotingFees[0], _convictionVotingFees[1]);
+
+//        _validateId(_id);
         _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, msg.sender);
-//         _registerID(_id, dao);
+//        _registerID(_id, dao);
         _deleteStoredContracts();
+
+        emit AgreementAddress(agreement);
     }
 
 
@@ -171,8 +205,7 @@ contract HoneyPotTemplate is BaseTemplate {
         internal returns (HookedTokenManager)
     {
         HookedTokenManager hookedTokenManager = HookedTokenManager(_installDefaultApp(_dao, HOOKED_TOKEN_MANAGER_APP_ID));
-        _token.changeController(hookedTokenManager);
-        hookedTokenManager.initialize(_token, _transferable, _maxAccountTokens);
+        emit HookedTokenManagerAddress(hookedTokenManager);
         return hookedTokenManager;
     }
 
@@ -210,22 +243,27 @@ contract HoneyPotTemplate is BaseTemplate {
         return convictionVoting;
     }
 
-    function _installBrightIdRegister(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting)
+    function _installBrightIdRegister(Kernel _dao, ACL _acl, DandelionVoting _dandelionVoting, bytes32 _1hiveContext, address _verifierAddress)
         internal returns (BrightIdRegister)
     {
         BrightIdRegister brightIdRegister = BrightIdRegister(_installNonDefaultApp(_dao, BRIGHTID_REGISTER_APP_ID));
-        bytes32 context1hive = 0x3168697665000000000000000000000000000000000000000000000000000000;
-        address verifierAddress = 0xead9c93b79ae7c1591b1fb5323bd777e86e150d4;
-        brightIdRegister.initialize(context1hive, verifierAddress, 60 days, 1 days);
+        brightIdRegister.initialize(_1hiveContext, _verifierAddress, 60 days, 1 days);
         emit BrightIdRegisterAddress(brightIdRegister);
 
         _acl.createPermission(ANY_ENTITY, brightIdRegister, brightIdRegister.UPDATE_SETTINGS_ROLE(), _dandelionVoting);
         return brightIdRegister;
     }
 
+    function _installAgreementApp(Kernel _dao, address _arbitrator, bool _setAppFeesCashier, string _title, bytes _content, address _stakingFactory)
+        internal returns (Agreement)
+    {
+        bytes memory initializeData = abi.encodeWithSelector(Agreement(0).initialize.selector, _arbitrator, _setAppFeesCashier, _title, _content, _stakingFactory);
+        return Agreement(_installNonDefaultApp(_dao, AGREEMENT_APP_ID, initializeData));
+    }
+
     // Permission setting functions //
 
-    function _createCustomVotingPermissions(ACL _acl, DandelionVoting _dandelionVoting, HookedTokenManager _hookedTokenManager)
+    function _createCustomVotingPermissions(ACL _acl, DandelionVoting _dandelionVoting)
         internal
     {
         _acl.createPermission(_dandelionVoting, _dandelionVoting, _dandelionVoting.MODIFY_QUORUM_ROLE(), _dandelionVoting);
@@ -254,15 +292,17 @@ contract HoneyPotTemplate is BaseTemplate {
         _acl.createPermission(_dandelionVoting, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), _dandelionVoting);
     }
 
-    function _createHookedTokenManagerPermissions(ACL acl, DandelionVoting dandelionVoting,HookedTokenManager hookedTokenManager, Issuance issuance) internal {
-        // (, ACL acl,DandelionVoting dandelionVoting,,HookedTokenManager hookedTokenManager) = _getDeployedContractsTxOne();
-
+    function _createHookedTokenManagerPermissions(ACL acl, DandelionVoting dandelionVoting, HookedTokenManager hookedTokenManager, Issuance issuance) internal {
         acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.MINT_ROLE(), dandelionVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), dandelionVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), dandelionVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), dandelionVoting);
         acl.createPermission(dandelionVoting, hookedTokenManager, hookedTokenManager.BURN_ROLE(), dandelionVoting);
+    }
 
+    function _createAgreementPermissions(ACL _acl, Agreement _agreement, address _grantee, address _manager) internal {
+        _acl.createPermission(_grantee, _agreement, _agreement.CHANGE_AGREEMENT_ROLE(), _manager);
+        _acl.createPermission(address(this), _agreement, _agreement.MANAGE_DISPUTABLE_ROLE(), address(this));
     }
 
     // Temporary Storage functions //
@@ -291,6 +331,15 @@ contract HoneyPotTemplate is BaseTemplate {
         );
     }
 
+    function _storeDeployedContractsTxTwo(ConvictionVoting _convictionVoting) internal {
+        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
+        deployedContracts.convictionVoting = _convictionVoting;
+    }
+
+    function _getDeployedContractsTxTwo() internal returns (ConvictionVoting) {
+        DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
+        return deployedContracts.convictionVoting;
+    }
 
     function _deleteStoredContracts() internal {
         delete senderDeployedContracts[msg.sender];

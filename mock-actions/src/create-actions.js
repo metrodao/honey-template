@@ -7,7 +7,7 @@ const REQUESTED_AMOUNT = bigExp(100, 18)
 
 module.exports = async (options = {}) => {
   const {
-    owner: beneficiary, arbitrator, feeToken,
+    owner: beneficiary,
     agreement: { proxy: agreement },
     convictionVoting: { proxy: convictionVoting }
   } = options

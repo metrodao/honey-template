@@ -33,9 +33,9 @@ const providerForNetwork = (network) => (
   () => {
     let { rpc, keys } = settingsForNetwork(network)
 
-    rpc = rpc || defaultRPC(network)
+    rpc = rpc || defaultRPC(network)
 
-    if (!keys || keys.length == 0) {
+    if (!keys || keys.length == 0) {
       return new HDWalletProvider(mnemonic(), rpc)
     }
 

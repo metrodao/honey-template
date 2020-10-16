@@ -7,12 +7,12 @@ https://rinkeby.etherscan.io/address/0x9a2F850C701b457b73c8dC8B1534Cc187B33F5FD
 
 For deploying the Honey Pot template with Agreements and mock proposals (note this uses a previously deployed Honey Pot template):
 
-1) Install dependencies inside the root folder and `/agreements`:
+1) Install dependencies inside the root folder and `/mock-actions`:
 ```
 $ npm install
 ```
 
-2) Compile contracts inside the root folder and `/agreements`:
+2) Compile contracts inside the root folder and `/mock-actions`:
 ```
 $ npx truffle compile
 ```
@@ -25,9 +25,9 @@ https://hack.aragon.org/docs/cli-intro#set-a-private-key):
 $ npx truffle exec scripts/new-dao.js --network rinkeby
 ```
 
-5) Install agreements and create mock proposals. Execute in the `/agreements` folder:
+5) Install agreements and create mock proposals. Execute in the `/mock-actions` folder:
 ```
-$ npx truffle exec mock-deploy/rinkeby.js --network rinkeby
+$ npx truffle exec src/rinkeby.js --network rinkeby
 ```
 
-6) The DAO address is in `/agreements/mock-deploy/rinkeby-config.json`
+6) The DAO address is in `/mock-actions/src/rinkeby-config.json`
