@@ -85,7 +85,8 @@ const networkDependantConfig = {
     ARBITRATOR: "0x35bB112ec8bC897b265E823EA99caEa7Bed03d68",
     STAKING_FACTORY: "0x07429001eeA415E967C57B8d43484233d57F8b0B",
     FEE_TOKEN: "0x848a3752aEcF096B68deb2143714F6b62F899C8e", // Some DAI copy, deployed in the court deployment
-    HNY_TOKEN: "0x0000000000000000000000000000000000000000" //"0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1"
+    HNY_TOKEN: "0x0000000000000000000000000000000000000000" // 0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1 from current court deployment.
+    // Beware setting to this as can only be run once as it will change the controller to the deployed DAO's tokenManager
   },
   xdai: {}
 }
@@ -115,6 +116,18 @@ module.exports = async (callback) => {
       BrightId Register address: ${ brightIdRegisterAddress }
       Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
 
+    // Update config file
+    let currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+    let newConfig = {
+      ...currentConfig,
+      daoAddress,
+      brightIdRegisterAddress,
+      hookedTokenManagerAddress,
+      agentAddress
+    }
+    fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
+
+
     const voteToken = await MiniMeToken.at(tokenAddress);
     if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
       console.log(`Setting token controller to hooked token manager...`)
@@ -122,44 +135,40 @@ module.exports = async (callback) => {
       console.log(`Token controller updated`)
     }
 
-    const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
-      ISSUANCE_RATE,
-      CONVICTION_SETTINGS
-    )
-
-    const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
-    console.log(`Tx Two Complete.
-      Conviction Voting address: ${ convictionVotingProxy }
-      Gas used: ${ createDaoTxTwoReceipt.receipt.gasUsed }`)
-
-    const createDaoTxThreeReceipt = await honeyPotTemplate.createDaoTxThree(
-      getNetworkDependantConfig().ARBITRATOR,
-      SET_APP_FEES_CASHIER,
-      AGREEMENT_TITLE,
-      AGREEMENT_CONTENT,
-      getNetworkDependantConfig().STAKING_FACTORY,
-      getNetworkDependantConfig().FEE_TOKEN,
-      CHALLENGE_DURATION,
-      CONVICTION_VOTING_FEES
-    )
-
-    const agreementProxy = getLogParameter(createDaoTxThreeReceipt, "AgreementAddress", "agreement")
-    console.log(`Tx Three Complete.
-      Agreement address: ${ agreementProxy }
-      Gas used: ${ createDaoTxThreeReceipt.receipt.gasUsed }`)
-
-
-    const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
-    const newConfig = {
-      ...currentConfig,
-      daoAddress,
-      brightIdRegisterAddress,
-      hookedTokenManagerAddress,
-      agentAddress,
-      convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy },
-      agreement: { ...currentConfig.agreement, proxy: agreementProxy }
-    }
-    fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
+    // const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
+    //   ISSUANCE_RATE,
+    //   CONVICTION_SETTINGS
+    // )
+    //
+    // const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
+    // console.log(`Tx Two Complete.
+    //   Conviction Voting address: ${ convictionVotingProxy }
+    //   Gas used: ${ createDaoTxTwoReceipt.receipt.gasUsed }`)
+    //
+    // const createDaoTxThreeReceipt = await honeyPotTemplate.createDaoTxThree(
+    //   getNetworkDependantConfig().ARBITRATOR,
+    //   SET_APP_FEES_CASHIER,
+    //   AGREEMENT_TITLE,
+    //   AGREEMENT_CONTENT,
+    //   getNetworkDependantConfig().STAKING_FACTORY,
+    //   getNetworkDependantConfig().FEE_TOKEN,
+    //   CHALLENGE_DURATION,
+    //   CONVICTION_VOTING_FEES
+    // )
+    //
+    // const agreementProxy = getLogParameter(createDaoTxThreeReceipt, "AgreementAddress", "agreement")
+    // console.log(`Tx Three Complete.
+    //   Agreement address: ${ agreementProxy }
+    //   Gas used: ${ createDaoTxThreeReceipt.receipt.gasUsed }`)
+    //
+    // // Update config file
+    // currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+    // newConfig = {
+    //   ...currentConfig,
+    //   convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy },
+    //   agreement: { ...currentConfig.agreement, proxy: agreementProxy }
+    // }
+    // fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
 
   } catch (error) {
     console.log(error)
