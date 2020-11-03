@@ -51,6 +51,7 @@ contract HoneyPotTemplate is BaseTemplate {
         ConvictionVoting convictionVoting;
     }
 
+    event DisputableVotingAddress(DisputableVoting disputableVoting);
     event VoteToken(MiniMeToken voteToken);
     event AgentAddress(Agent agentAddress);
     event HookedTokenManagerAddress(HookedTokenManager hookedTokenManagerAddress);
@@ -104,6 +105,7 @@ contract HoneyPotTemplate is BaseTemplate {
 
         _storeDeployedContractsTxOne(dao, acl, disputableVoting, fundingPoolVault, hookedTokenManager, voteToken);
 
+        emit DisputableVotingAddress(disputableVoting);
         emit VoteToken(voteToken);
         emit AgentAddress(agent);
     }
@@ -280,6 +282,8 @@ contract HoneyPotTemplate is BaseTemplate {
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_DELEGATED_VOTING_PERIOD_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_QUIET_ENDING_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_EXECUTION_DELAY_ROLE(), _disputableVoting);
+        _acl.createPermission(ANY_ENTITY, _disputableVoting, _disputableVoting.CREATE_VOTES_ROLE(), _disputableVoting);
+        _acl.createPermission(ANY_ENTITY, _disputableVoting, _disputableVoting.CHALLENGE_ROLE(), _disputableVoting);
     }
 
     function _createIssuancePermissions(ACL _acl, Issuance _issuance, DisputableVoting _disputableVoting) internal {

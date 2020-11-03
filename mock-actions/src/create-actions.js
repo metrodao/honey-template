@@ -9,7 +9,8 @@ module.exports = async (options = {}) => {
   const {
     owner: beneficiary,
     agreement: { proxy: agreement },
-    convictionVoting: { proxy: convictionVoting }
+    convictionVoting: { proxy: convictionVoting },
+    disputableVoting
   } = options
 
   if ((await agreement.getSigner(beneficiary)).mustSign) {
@@ -18,26 +19,59 @@ module.exports = async (options = {}) => {
     await agreement.sign(currentSettingId)
   }
 
-  console.log('\nCreating non challenged action...')
-  await newAction(beneficiary, agreement, convictionVoting, 'Proposal 1', 'Context for action 1')
+  await createConvictionVotingActions(beneficiary, agreement, convictionVoting, options)
+  await createDisputableVotingActions(beneficiary, agreement, disputableVoting, options)
+}
 
-  console.log('\nCreating challenged action...')
-  const challengedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 2', 'Context for action 2')
+const createConvictionVotingActions = async (beneficiary, agreement, convictionVoting, options) => {
+  console.log('\nCreating non challenged proposal action...')
+  await newProposal(beneficiary, agreement, convictionVoting, 'Proposal 1', 'Context for action 1')
+
+  console.log('\nCreating challenged proposal action...')
+  const challengedActionId = await newProposal(beneficiary, agreement, convictionVoting, 'Proposal 2', 'Context for action 2')
   await challenge(agreement, challengedActionId, 'Challenge context for action 2', options, convictionVoting)
 
-  console.log('\nCreating settled action...')
-  const settledActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 3', 'Context for action 3')
+  console.log('\nCreating settled proposal action...')
+  const settledActionId = await newProposal(beneficiary, agreement, convictionVoting, 'Proposal 3', 'Context for action 3')
   await challenge(agreement, settledActionId, 'Challenge context for action 3', options, convictionVoting)
   await settle(agreement, settledActionId)
 
-  console.log('\nCreating disputed action...')
+  console.log('\nCreating disputed proposal action...')
   // await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
-  const disputedActionId = await newAction(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
+  const disputedActionId = await newProposal(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
   await challenge(agreement, disputedActionId, 'Challenge context for action 4', options, convictionVoting)
-  await dispute(agreement, disputedActionId, options, convictionVoting)
+  await dispute(agreement, disputedActionId, options)
 }
 
-async function newAction(beneficiary, agreement, convictionVoting, title, context) {
+const createDisputableVotingActions = async (beneficiary, agreement, disputableVoting, options) => {
+  console.log('\nCreating non challenged vote action...')
+  await newVote(agreement, disputableVoting, 'Vote 1')
+
+  console.log('\nCreating challenged vote action...')
+  const challengedActionId = await newVote(agreement, disputableVoting, 'Vote 2')
+  await challenge(agreement, challengedActionId, 'Challenge context for action 6', options, disputableVoting)
+
+  console.log('\nCreating settled vote action...')
+  const settledActionId = await newVote(agreement, disputableVoting, 'Vote 3')
+  await challenge(agreement, settledActionId, 'Challenge context for action 7', options, disputableVoting)
+  await settle(agreement, settledActionId)
+
+  console.log('\nCreating disputed vote action...')
+  // await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
+  const disputedActionId = await newVote(agreement, disputableVoting, 'Vote 4')
+  await challenge(agreement, disputedActionId, 'Challenge context for action 8', options, disputableVoting)
+  await dispute(agreement, disputedActionId, options)
+}
+
+async function newVote(agreement, voting, context) {
+  console.log('Creating vote action...')
+  const receipt = await voting.newVote(EMPTY_CALLS_SCRIPT, utf8ToHex(context))
+  const actionId = getEventArgument(receipt, 'ActionSubmitted', 'actionId', { decodeForAbi: agreement.abi })
+  console.log(`Created vote action ID ${actionId}`)
+  return actionId
+}
+
+async function newProposal(beneficiary, agreement, convictionVoting, title, context) {
   console.log('Creating action/proposal...')
   const addProposalReceipt = await convictionVoting.addProposal(title, utf8ToHex(context), REQUESTED_AMOUNT, beneficiary)
   const actionId = getEventArgument(addProposalReceipt, 'ActionSubmitted', 'actionId', { decodeForAbi: agreement.abi })
@@ -45,14 +79,14 @@ async function newAction(beneficiary, agreement, convictionVoting, title, contex
   return actionId
 }
 
-async function challenge(agreement, actionId, context, options, convictionVoting) {
+async function challenge(agreement, actionId, context, options, disputableApp) {
   console.log('Approving dispute fees from challenger...')
   const { feeToken, arbitrator } = options
   const { feeAmount } = await arbitrator.getDisputeFees()
   const challenger = await getChallenger()
 
-  const { currentCollateralRequirementId } = await agreement.getDisputableInfo(convictionVoting.address)
-  const { collateralToken: collateralTokenAddress, challengeAmount } = await agreement.getCollateralRequirement(convictionVoting.address, currentCollateralRequirementId)
+  const { currentCollateralRequirementId } = await agreement.getDisputableInfo(disputableApp.address)
+  const { collateralToken: collateralTokenAddress, challengeAmount } = await agreement.getCollateralRequirement(disputableApp.address, currentCollateralRequirementId)
   console.log("Fee token address", feeToken.address)
   const collateralToken = await getArtifacts().require("ERC20").at(collateralTokenAddress)
   console.log(

@@ -28,4 +28,6 @@ interface DisputableVoting {
         uint64 _quietEndingExtension,
         uint64 _executionDelay
     ) external;
+
+    function newVote(bytes _executionScript, bytes _context) external returns (uint256);
 }

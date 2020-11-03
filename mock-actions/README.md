@@ -25,7 +25,7 @@ https://hack.aragon.org/docs/cli-intro#set-a-private-key):
 $ npx truffle exec scripts/new-dao.js --network rinkeby
 ```
 
-5) Install agreements and create mock proposals. Execute in the `/mock-actions` folder:
+5) Create mock proposals. Execute in the `/mock-actions` folder:
 ```
 $ npx truffle exec src/rinkeby.js --network rinkeby
 ```

@@ -24,6 +24,7 @@ async function loadConfig(config) {
   const options = config
   options.owner = (await web3.eth.getAccounts())[0]
   options.convictionVoting.proxy = await instanceOrEmpty(options.convictionVoting.proxy, 'IConvictionVoting')
+  options.disputableVoting = await instanceOrEmpty(options.disputableVotingAddress, 'DisputableVoting')
   options.agreement.proxy = await instanceOrEmpty(options.agreement.proxy, 'Agreement')
   options.feeToken = await getInstance('MiniMeToken', options.feeToken)
   options.arbitrator = await getInstance('IArbitratorCustom', options.arbitrator)
