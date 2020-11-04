@@ -50,7 +50,7 @@
     "@aragon/templates-shared": "1.0.0",
     "@1hive/apps-dandelion-voting": "2.0.0",
     "@1hive/apps-redemptions": "2.0.1",
-    "@1hive/apps-token-manager": "2.1.0",
+    "@1hive/apps-token-manager": "3.0.2",
     "@1hive/apps-brightid-register": "0.1.2",
     "@ablack/fundraising-aragon-fundraising": "^1.0.0",
     "@ablack/fundraising-bancor-formula": "^1.0.0",

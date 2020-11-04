@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require("path");
 const HoneyPotTemplate = artifacts.require("HoneyPotTemplate")
 const MiniMeToken = artifacts.require("MiniMeToken")
+const HookedTokenManager = artifacts.require("IHookedTokenManager")
 
 const { pct16, bn, getEventArgument, ONE_DAY } = require('@aragon/contract-helpers-test')
 
@@ -10,6 +11,7 @@ const CONFIG_FILE_PATH = '../mock-actions/src/rinkeby-config.json'
 const DAO_ID = "honey-pot" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
 const NETWORK_ARG = "--network"
 const DAO_ID_ARG = "--daoid"
+const OLD_TOKEN_MANAGER = "0x8e8563492b1170af1096dd2980063b04a2d80fca"
 
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
 const getLogParameter = (receipt, log, parameter) => receipt.logs.find(x => x.event === log).args[parameter]
@@ -82,11 +84,11 @@ const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
 
 const networkDependantConfig = {
   rinkeby: {
-    ARBITRATOR: "0x35bB112ec8bC897b265E823EA99caEa7Bed03d68",
+    ARBITRATOR: "0x077d607f22BD40Ce2437E7839f7Ca61Aa93dF342",
     STAKING_FACTORY: "0x07429001eeA415E967C57B8d43484233d57F8b0B",
-    FEE_TOKEN: "0x848a3752aEcF096B68deb2143714F6b62F899C8e", // Some DAI copy, deployed in the court deployment
-    HNY_TOKEN: "0x0000000000000000000000000000000000000000" // 0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1 from current court deployment.
-    // Beware setting to this as can only be run once as it will change the controller to the deployed DAO's tokenManager
+    FEE_TOKEN: "0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1", // Some DAI copy, deployed in the court deployment
+    HNY_TOKEN: "0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1" // 0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1 from current court deployment.
+    // Beware setting to this, to change in future require manually calling change controller on the token manager.
   },
   xdai: {}
 }
@@ -95,47 +97,52 @@ module.exports = async (callback) => {
   try {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
 
-    console.log(`Creating DAO...`)
-    const createDaoTxOneReceipt = await honeyPotTemplate.createDaoTxOne(
-      getNetworkDependantConfig().HNY_TOKEN,
-      VOTING_SETTINGS,
-      BRIGHTID_1HIVE_CONTEXT,
-      BRIGHTID_VERIFIER_ADDRESS
-    );
-
-    const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
-    const disputableVotingAddress = getLogParameter(createDaoTxOneReceipt, "DisputableVotingAddress", "disputableVoting")
-    const tokenAddress = getLogParameter(createDaoTxOneReceipt, "VoteToken", "voteToken")
-    const hookedTokenManagerAddress = getLogParameter(createDaoTxOneReceipt, "HookedTokenManagerAddress", "hookedTokenManagerAddress")
-    const agentAddress = getLogParameter(createDaoTxOneReceipt, "AgentAddress", "agentAddress")
-    const brightIdRegisterAddress = getLogParameter(createDaoTxOneReceipt, "BrightIdRegisterAddress", "brightIdRegister")
-    console.log(`Tx One Complete.
-      DAO address: ${ daoAddress }
-      Disputable Voting address: ${ disputableVotingAddress }
-      Token address: ${ tokenAddress }
-      Hooked Token Manager address: ${ hookedTokenManagerAddress }
-      Agent address: ${ agentAddress }
-      BrightId Register address: ${ brightIdRegisterAddress }
-      Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
-
-    // Update config file
-    let currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
-    let newConfig = {
-      ...currentConfig,
-      daoAddress,
-      disputableVotingAddress,
-      brightIdRegisterAddress,
-      hookedTokenManagerAddress,
-      agentAddress
-    }
-    fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
-
-    const voteToken = await MiniMeToken.at(tokenAddress);
-    if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
-      console.log(`Setting token controller to hooked token manager...`)
-      await voteToken.changeController(hookedTokenManagerAddress)
-      console.log(`Token controller updated`)
-    }
+    // console.log(`Creating DAO...`)
+    // const createDaoTxOneReceipt = await honeyPotTemplate.createDaoTxOne(
+    //   getNetworkDependantConfig().HNY_TOKEN,
+    //   VOTING_SETTINGS,
+    //   BRIGHTID_1HIVE_CONTEXT,
+    //   BRIGHTID_VERIFIER_ADDRESS
+    // );
+    //
+    // const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
+    // const disputableVotingAddress = getLogParameter(createDaoTxOneReceipt, "DisputableVotingAddress", "disputableVoting")
+    // const tokenAddress = getLogParameter(createDaoTxOneReceipt, "VoteToken", "voteToken")
+    // const hookedTokenManagerAddress = getLogParameter(createDaoTxOneReceipt, "HookedTokenManagerAddress", "hookedTokenManagerAddress")
+    // const agentAddress = getLogParameter(createDaoTxOneReceipt, "AgentAddress", "agentAddress")
+    // const brightIdRegisterAddress = getLogParameter(createDaoTxOneReceipt, "BrightIdRegisterAddress", "brightIdRegister")
+    // console.log(`Tx One Complete.
+    //   DAO address: ${ daoAddress }
+    //   Disputable Voting address: ${ disputableVotingAddress }
+    //   Token address: ${ tokenAddress }
+    //   Hooked Token Manager address: ${ hookedTokenManagerAddress }
+    //   Agent address: ${ agentAddress }
+    //   BrightId Register address: ${ brightIdRegisterAddress }
+    //   Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
+    //
+    // // Update config file
+    // let currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+    // let newConfig = {
+    //   ...currentConfig,
+    //   daoAddress,
+    //   disputableVotingAddress,
+    //   brightIdRegisterAddress,
+    //   hookedTokenManagerAddress,
+    //   agentAddress
+    // }
+    // fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
+    //
+    // const voteToken = await MiniMeToken.at(tokenAddress);
+    // if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
+    //   console.log(`Setting token controller to hooked token manager...`)
+    //   await voteToken.changeController(hookedTokenManagerAddress)
+    //   console.log(`Token controller updated`)
+    // } else if (OLD_TOKEN_MANAGER !== "") {
+    //   const oldHookedTokenManager = await HookedTokenManager.at(OLD_TOKEN_MANAGER)
+    //   console.log(`Updating token controller to hooked token manager from old token manager...`)
+    //   await oldHookedTokenManager.changeTokenController(hookedTokenManagerAddress)
+    //   console.log(`Token controller updated`)
+    // }
 
     const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
       ISSUANCE_RATE,
@@ -167,6 +174,8 @@ module.exports = async (callback) => {
     currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
     newConfig = {
       ...currentConfig,
+      arbitrator: getNetworkDependantConfig().ARBITRATOR,
+      feeToken: getNetworkDependantConfig().FEE_TOKEN,
       convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy },
       agreement: { ...currentConfig.agreement, proxy: agreementProxy }
     }

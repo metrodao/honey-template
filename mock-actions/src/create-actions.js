@@ -37,7 +37,6 @@ const createConvictionVotingActions = async (beneficiary, agreement, convictionV
   await settle(agreement, settledActionId)
 
   console.log('\nCreating disputed proposal action...')
-  // await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
   const disputedActionId = await newProposal(beneficiary, agreement, convictionVoting, 'Proposal 4', 'Context for action 4')
   await challenge(agreement, disputedActionId, 'Challenge context for action 4', options, convictionVoting)
   await dispute(agreement, disputedActionId, options)
@@ -57,7 +56,6 @@ const createDisputableVotingActions = async (beneficiary, agreement, disputableV
   await settle(agreement, settledActionId)
 
   console.log('\nCreating disputed vote action...')
-  // await payCourtFees(arbitrator, agreement, feeToken, beneficiary)
   const disputedActionId = await newVote(agreement, disputableVoting, 'Vote 4')
   await challenge(agreement, disputedActionId, 'Challenge context for action 8', options, disputableVoting)
   await dispute(agreement, disputedActionId, options)
@@ -108,17 +106,6 @@ async function settle(agreement, actionId) {
   console.log(`Settled action ID ${ actionId }`)
 }
 
-const payCourtFees = async (arbitrator, agreement, feeToken, owner) => {
-  const periods = bn(1)
-  const subscriptionsAddress = await arbitrator.getSubscriptions()
-  const subscriptions = await getInstance('ISubscriptions', subscriptionsAddress)
-  const { amountToPay } = await subscriptions.getPayFeesDetails(agreement.address, periods)
-  console.log(`Amount to pay: ${ amountToPay.toString() } Approving fees payment...`)
-  await approveFeeToken(feeToken, owner, subscriptionsAddress, amountToPay)
-  console.log(`Paying court fees...`)
-  await subscriptions.payFees(agreement.address, periods)
-}
-
 async function dispute(agreement, actionId, options) {
   console.log('Approving dispute fees from submitter')
 
@@ -144,6 +131,7 @@ async function approveFeeToken(token, from, to, amount) {
   }
   const newAllowance = amount.add(allowance)
   // await token.generateTokens(from, amount)
+  console.log("Executing approve...")
   return token.approve(to, newAllowance, { from })
 }
 

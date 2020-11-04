@@ -1,21 +1,21 @@
 {
-  "daoAddress": "0xa884591df07893125c64bb15c93600490a543e9a",
+  "daoAddress": "0xea5cdf04ba66702ed81a976a03b06ca97e1d7969",
   "convictionVoting": {
-    "proxy": "0xb72c495335425e704a1c38508fd51290fd976019"
+    "proxy": "0x2a33b1d876c08a17806d6e1ddd71eceed327efaa"
   },
-  "arbitrator": "0x35bB112ec8bC897b265E823EA99caEa7Bed03d68",
+  "arbitrator": "0x077d607f22BD40Ce2437E7839f7Ca61Aa93dF342",
   "stakingFactory": "0x07429001eeA415E967C57B8d43484233d57F8b0B",
   "setFeesCashier": false,
-  "feeToken": "0x848a3752aEcF096B68deb2143714F6b62F899C8e",
+  "feeToken": "0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1",
   "agreement": {
     "base": "0x90d878b0C7E5d72D15bDF76B79D1B0C8EacbC38c",
-    "proxy": "0xcbe1969e1e29f53680c173cb5fccd8b6bf4c73bb",
+    "proxy": "0xf0b4dd3b7a420b55a70dd5e4262c567dd2a87eab",
     "appId": "0x15a969a0e134d745b604fb43f699bb5c146424792084c198d53050c4d08126d1",
     "title": "Aragon Network Cash Agreement",
     "content": "ipfs:QmPvfWUNt3WrZ7uaB1ZwEmec3Zr1ABL9CncSDfQypWkmnp"
   },
-  "brightIdRegisterAddress": "0xc8c09d8f04d2e16eab1d0d8851ed3ca8124f00ec",
-  "agentAddress": "0x1f75d5a25c905a053e0b0d01d332dcb218413cab",
-  "hookedTokenManagerAddress": "0x02f7714ff80dacf2d46427ae12f5e861ecf35980",
-  "disputableVotingAddress": "0xfcd10d45825523d67253a12f3698406cd9a64883"
+  "brightIdRegisterAddress": "0xaec078c343076e361b20708b6549fd0058b3307e",
+  "agentAddress": "0x7872b589f052320e220c55aba75ba6aa3f43962b",
+  "hookedTokenManagerAddress": "0x8e8563492b1170af1096dd2980063b04a2d80fca",
+  "disputableVotingAddress": "0x4b6991b6c67b35b88987590492cd5e8b2de7956b"
 }

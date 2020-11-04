@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
-import "@1hive/apps-token-manager/contracts/HookedTokenManager.sol";
+import {IHookedTokenManager as HookedTokenManager} from "./external/IHookedTokenManager.sol";
 import {IIssuance as Issuance} from "./external/IIssuance.sol";
 import {ITollgate as Tollgate} from "./external/ITollgate.sol";
 import {IConvictionVoting as ConvictionVoting} from "./external/IConvictionVoting.sol";
@@ -25,7 +25,7 @@ contract HoneyPotTemplate is BaseTemplate {
      bytes32 private constant AGREEMENT_APP_ID = 0x41dd0b999b443a19321f2f34fe8078d1af95a1487b49af4c2ca57fb9e3e5331e; // agreement-1hive.open.aragonpm.eth
      bytes32 private constant DISPUTABLE_VOTING_APP_ID = 0x39aa9e500efe56efda203714d12c78959ecbf71223162614ab5b56eaba014145; // probably disputable-voting.open.aragonpm.eth
 
-    // xdai
+    // xdai // TODO: Remove the Change Controller Permission
 //    bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("dandelion-voting")));
 //    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("conviction-voting")));
 //    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("token-manager")));
@@ -147,7 +147,8 @@ contract HoneyPotTemplate is BaseTemplate {
         _createIssuancePermissions(acl, issuance, disputableVoting);
         _createHookedTokenManagerPermissions(acl, disputableVoting, hookedTokenManager, issuance);
 
-        ConvictionVoting convictionVoting = _installConvictionVoting(dao, hookedTokenManager.token(), fundingPoolVault, hookedTokenManager.token(), _convictionSettings);
+        ConvictionVoting convictionVoting = _installConvictionVoting(dao, MiniMeToken(hookedTokenManager.token()),
+            fundingPoolVault, MiniMeToken(hookedTokenManager.token()), _convictionSettings);
         _createConvictionVotingPermissions(acl, convictionVoting, disputableVoting);
         _createVaultPermissions(acl, fundingPoolVault, convictionVoting, disputableVoting);
 
@@ -306,6 +307,7 @@ contract HoneyPotTemplate is BaseTemplate {
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), disputableVoting);
         acl.createPermission(disputableVoting, hookedTokenManager, hookedTokenManager.BURN_ROLE(), disputableVoting);
+        acl.createPermission(ANY_ENTITY, hookedTokenManager, hookedTokenManager.CHANGE_CONTROLLER_ROLE(), disputableVoting); // TODO: Remove this permission for live deployment
     }
 
     function _createAgreementPermissions(ACL _acl, Agreement _agreement, address _grantee, address _manager) internal {
