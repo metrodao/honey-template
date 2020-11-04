@@ -79,7 +79,7 @@ contract HoneyPotTemplate is BaseTemplate {
         MiniMeToken _voteToken,
         uint64[7] _disputableVotingSettings,
         bytes32 _1hiveContext,
-        address _verifierAddress
+        address[] _verifiers
     )
         public // Increases stack limit over using external
     {
@@ -96,7 +96,7 @@ contract HoneyPotTemplate is BaseTemplate {
         }
 
         DisputableVoting disputableVoting = _installDisputableVotingApp(dao, voteToken, _disputableVotingSettings);
-        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, disputableVoting, _1hiveContext, _verifierAddress);
+        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, disputableVoting, _1hiveContext, _verifiers);
         HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
         _createDisputableVotingPermissions(acl, disputableVoting);
@@ -254,11 +254,11 @@ contract HoneyPotTemplate is BaseTemplate {
         return convictionVoting;
     }
 
-    function _installBrightIdRegister(Kernel _dao, ACL _acl, DisputableVoting _disputableVoting, bytes32 _1hiveContext, address _verifierAddress)
+    function _installBrightIdRegister(Kernel _dao, ACL _acl, DisputableVoting _disputableVoting, bytes32 _1hiveContext, address[] _verifiers)
         internal returns (BrightIdRegister)
     {
         BrightIdRegister brightIdRegister = BrightIdRegister(_installNonDefaultApp(_dao, BRIGHTID_REGISTER_APP_ID));
-        brightIdRegister.initialize(_1hiveContext, _verifierAddress, 60 days, 1 days);
+        brightIdRegister.initialize(_1hiveContext, _verifiers, 60 days, 1 days);
         emit BrightIdRegisterAddress(brightIdRegister);
 
         _acl.createPermission(ANY_ENTITY, brightIdRegister, brightIdRegister.UPDATE_SETTINGS_ROLE(), _disputableVoting);

@@ -102,7 +102,7 @@ module.exports = async (callback) => {
     //   getNetworkDependantConfig().HNY_TOKEN,
     //   VOTING_SETTINGS,
     //   BRIGHTID_1HIVE_CONTEXT,
-    //   BRIGHTID_VERIFIER_ADDRESS
+    //   [BRIGHTID_VERIFIER_ADDRESS]
     // );
     //
     // const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
