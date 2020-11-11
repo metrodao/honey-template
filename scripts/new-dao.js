@@ -86,11 +86,13 @@ const networkDependantConfig = {
   rinkeby: {
     ARBITRATOR: "0xD22D39b3C19ba77938C8f6f36Dbf81f5F220feFB",
     STAKING_FACTORY: "0x07429001eeA415E967C57B8d43484233d57F8b0B",
-    FEE_TOKEN: "0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1", // Some DAI copy, deployed in the court deployment
+    FEE_TOKEN: "0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1", // Using HNY token
     HNY_TOKEN: "0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1" // 0x658BD9EE8788014b3DBf2bf0d66af344d84a5aA1 from current court deployment.
     // Beware setting to this, to change in future require manually calling change controller on the token manager.
   },
-  xdai: {}
+  xdai: {
+    STAKING_FACTORY: "0xe71331AEf803BaeC606423B105e4d1C85f012C00" // Deployed 11/10/20
+  }
 }
 
 module.exports = async (callback) => {
