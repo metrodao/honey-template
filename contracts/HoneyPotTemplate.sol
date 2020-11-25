@@ -20,17 +20,14 @@ contract HoneyPotTemplate is BaseTemplate {
      bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-conviction-voting")));
      bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
      bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
-     bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("tollgate")));
      bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register")));
      bytes32 private constant AGREEMENT_APP_ID = 0x41dd0b999b443a19321f2f34fe8078d1af95a1487b49af4c2ca57fb9e3e5331e; // agreement-1hive.open.aragonpm.eth
      bytes32 private constant DISPUTABLE_VOTING_APP_ID = 0x39aa9e500efe56efda203714d12c78959ecbf71223162614ab5b56eaba014145; // probably disputable-voting.open.aragonpm.eth
 
     // xdai // TODO: Remove the Change Controller Permission
-//    bytes32 private constant DANDELION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("dandelion-voting")));
 //    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("conviction-voting")));
 //    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("token-manager")));
 //    bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("issuance")));
-//    bytes32 private constant TOLLGATE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("tollgate")));
 
     uint256 private constant VAULT_INITIAL_FUNDS = 1000e18;
     bool private constant TOKEN_TRANSFERABLE = true;
@@ -53,6 +50,7 @@ contract HoneyPotTemplate is BaseTemplate {
 
     event DisputableVotingAddress(DisputableVoting disputableVoting);
     event VoteToken(MiniMeToken voteToken);
+    event VaultAddress(Vault vaultAddress);
     event AgentAddress(Agent agentAddress);
     event HookedTokenManagerAddress(HookedTokenManager hookedTokenManagerAddress);
     event ConvictionVotingAddress(ConvictionVoting convictionVoting);
@@ -80,7 +78,7 @@ contract HoneyPotTemplate is BaseTemplate {
         uint64[7] _disputableVotingSettings,
         bytes32 _1hiveContext,
         address[] _verifiers,
-        uint256 _verificationsRequired
+        uint256[3] _brightIdSettings
     )
         public // Increases stack limit over using external
     {
@@ -97,8 +95,8 @@ contract HoneyPotTemplate is BaseTemplate {
         }
 
         DisputableVoting disputableVoting = _installDisputableVotingApp(dao, voteToken, _disputableVotingSettings);
-        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, disputableVoting, _1hiveContext, _verifiers, _verificationsRequired);
-        HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
+        BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, disputableVoting, _1hiveContext, _verifiers, _brightIdSettings);
+        HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao);
 
         _createDisputableVotingPermissions(acl, disputableVoting);
         _createAgentPermissions(acl, agent, ANY_ENTITY, disputableVoting);
@@ -108,6 +106,7 @@ contract HoneyPotTemplate is BaseTemplate {
 
         emit DisputableVotingAddress(disputableVoting);
         emit VoteToken(voteToken);
+        emit VaultAddress(fundingPoolVault);
         emit AgentAddress(agent);
     }
 
@@ -118,6 +117,8 @@ contract HoneyPotTemplate is BaseTemplate {
     */
     function createDaoTxTwo(
         uint256 _issuanceRate,
+        ERC20 _stableToken,
+        address _stableTokenOracle,
         uint64[4] _convictionSettings
     )
         public
@@ -136,10 +137,10 @@ contract HoneyPotTemplate is BaseTemplate {
 
         // TODO: Remove for prod
         // Mint some initial funds for distribution via conviction voting and for creator. Only for testing, remove for prod.
-        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-        hookedTokenManager.mint(msg.sender, 20000e18);
-        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
-        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+//        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+//        hookedTokenManager.mint(msg.sender, 20000e18);
+//        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
+//        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
         Issuance issuance = _installIssuance(dao, hookedTokenManager);
         _createPermissionForTemplate(acl, issuance, issuance.ADD_POLICY_ROLE());
@@ -149,7 +150,7 @@ contract HoneyPotTemplate is BaseTemplate {
         _createHookedTokenManagerPermissions(acl, disputableVoting, hookedTokenManager, issuance);
 
         ConvictionVoting convictionVoting = _installConvictionVoting(dao, MiniMeToken(hookedTokenManager.token()),
-            fundingPoolVault, MiniMeToken(hookedTokenManager.token()), _convictionSettings);
+            _stableToken, _stableTokenOracle, fundingPoolVault, _convictionSettings);
         _createConvictionVotingPermissions(acl, convictionVoting, disputableVoting);
         _createVaultPermissions(acl, fundingPoolVault, convictionVoting, disputableVoting);
 
@@ -202,14 +203,7 @@ contract HoneyPotTemplate is BaseTemplate {
 
     // App installation/setup functions //
 
-    function _installHookedTokenManagerApp(
-        Kernel _dao,
-        MiniMeToken _token,
-        bool _transferable,
-        uint256 _maxAccountTokens
-    )
-        internal returns (HookedTokenManager)
-    {
+    function _installHookedTokenManagerApp(Kernel _dao) internal returns (HookedTokenManager) {
         HookedTokenManager hookedTokenManager = HookedTokenManager(_installDefaultApp(_dao, HOOKED_TOKEN_MANAGER_APP_ID));
         emit HookedTokenManagerAddress(hookedTokenManager);
         return hookedTokenManager;
@@ -230,14 +224,6 @@ contract HoneyPotTemplate is BaseTemplate {
         return DisputableVoting(_installNonDefaultApp(_dao, DISPUTABLE_VOTING_APP_ID, initializeData));
     }
 
-    function _installTollgate(Kernel _dao, ERC20 _tollgateFeeToken, uint256 _tollgateFeeAmount, address _tollgateFeeDestination)
-        internal returns (Tollgate)
-    {
-        Tollgate tollgate = Tollgate(_installNonDefaultApp(_dao, TOLLGATE_APP_ID));
-        tollgate.initialize(_tollgateFeeToken, _tollgateFeeAmount, _tollgateFeeDestination);
-        return tollgate;
-    }
-
     function _installIssuance(Kernel _dao, HookedTokenManager _hookedTokenManager)
       internal returns (Issuance)
     {
@@ -246,20 +232,20 @@ contract HoneyPotTemplate is BaseTemplate {
         return issuance;
     }
 
-    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeToken, Vault _agentOrVault, MiniMeToken _requestToken, uint64[4] _convictionSettings)
+    function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeAndRequestToken, ERC20 _stableToken, address _stableTokenOracle, Vault _agentOrVault, uint64[4] _convictionSettings)
         internal returns (ConvictionVoting)
     {
         ConvictionVoting convictionVoting = ConvictionVoting(_installNonDefaultApp(_dao, CONVICTION_VOTING_APP_ID));
-        convictionVoting.initialize(_stakeToken, _agentOrVault, _requestToken, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2], _convictionSettings[3]);
+        convictionVoting.initialize(_stakeAndRequestToken, _stakeAndRequestToken, _stableToken, _stableTokenOracle, _agentOrVault, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2], _convictionSettings[3]);
         emit ConvictionVotingAddress(convictionVoting);
         return convictionVoting;
     }
 
-    function _installBrightIdRegister(Kernel _dao, ACL _acl, DisputableVoting _disputableVoting, bytes32 _1hiveContext, address[] _verifiers, uint256 _verificationsRequired)
+    function _installBrightIdRegister(Kernel _dao, ACL _acl, DisputableVoting _disputableVoting, bytes32 _1hiveContext, address[] _verifiers, uint256[3] _brightIdSettings)
         internal returns (BrightIdRegister)
     {
         BrightIdRegister brightIdRegister = BrightIdRegister(_installNonDefaultApp(_dao, BRIGHTID_REGISTER_APP_ID));
-        brightIdRegister.initialize(_1hiveContext, _verifiers, _verificationsRequired, 60 days, 1 days);
+        brightIdRegister.initialize(_1hiveContext, _verifiers, _brightIdSettings[0], _brightIdSettings[1], _brightIdSettings[2]);
         emit BrightIdRegisterAddress(brightIdRegister);
 
         _acl.createPermission(ANY_ENTITY, brightIdRegister, brightIdRegister.UPDATE_SETTINGS_ROLE(), _disputableVoting);
@@ -278,14 +264,14 @@ contract HoneyPotTemplate is BaseTemplate {
     function _createDisputableVotingPermissions(ACL _acl, DisputableVoting _disputableVoting)
         internal
     {
+        _acl.createPermission(ANY_ENTITY, _disputableVoting, _disputableVoting.CHALLENGE_ROLE(), _disputableVoting);
+        _acl.createPermission(ANY_ENTITY, _disputableVoting, _disputableVoting.CREATE_VOTES_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_VOTE_TIME_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_SUPPORT_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_QUORUM_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_DELEGATED_VOTING_PERIOD_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_QUIET_ENDING_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_EXECUTION_DELAY_ROLE(), _disputableVoting);
-        _acl.createPermission(ANY_ENTITY, _disputableVoting, _disputableVoting.CREATE_VOTES_ROLE(), _disputableVoting);
-        _acl.createPermission(ANY_ENTITY, _disputableVoting, _disputableVoting.CHALLENGE_ROLE(), _disputableVoting);
     }
 
     function _createIssuancePermissions(ACL _acl, Issuance _issuance, DisputableVoting _disputableVoting) internal {
@@ -303,12 +289,13 @@ contract HoneyPotTemplate is BaseTemplate {
     }
 
     function _createHookedTokenManagerPermissions(ACL acl, DisputableVoting disputableVoting, HookedTokenManager hookedTokenManager, Issuance issuance) internal {
+        // TODO: Remove this permission for live deployment !!! ARGH !!!
+        acl.createPermission(ANY_ENTITY, hookedTokenManager, hookedTokenManager.CHANGE_CONTROLLER_ROLE(), disputableVoting);
         acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.MINT_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), disputableVoting);
-        acl.createPermission(disputableVoting, hookedTokenManager, hookedTokenManager.BURN_ROLE(), disputableVoting);
-        acl.createPermission(ANY_ENTITY, hookedTokenManager, hookedTokenManager.CHANGE_CONTROLLER_ROLE(), disputableVoting); // TODO: Remove this permission for live deployment
+        // acl.createPermission(disputableVoting, hookedTokenManager, hookedTokenManager.BURN_ROLE(), disputableVoting);
     }
 
     function _createAgreementPermissions(ACL _acl, Agreement _agreement, address _grantee, address _manager) internal {

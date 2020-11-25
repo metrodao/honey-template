@@ -71,7 +71,7 @@ async function newVote(agreement, voting, context) {
 
 async function newProposal(beneficiary, agreement, convictionVoting, title, context) {
   console.log('Creating action/proposal...')
-  const addProposalReceipt = await convictionVoting.addProposal(title, utf8ToHex(context), REQUESTED_AMOUNT, beneficiary)
+  const addProposalReceipt = await convictionVoting.addProposal(title, utf8ToHex(context), REQUESTED_AMOUNT, false, beneficiary)
   const actionId = getEventArgument(addProposalReceipt, 'ActionSubmitted', 'actionId', { decodeForAbi: agreement.abi })
   console.log(`Created action ID ${ actionId }`)
   return actionId
@@ -96,6 +96,7 @@ async function challenge(agreement, actionId, context, options, disputableApp) {
   console.log("Challenger:", challenger, "Fee amount:", feeAmount.toString(), "Balance: ", (await feeToken.balanceOf(challenger)).toString())
   await approveFeeToken(feeToken, challenger, agreement.address, feeAmount)
   console.log('Challenging action')
+  // Make sure the challenger has funds to challenge, if new tokens they won't have.
   await agreement.challengeAction(actionId, 0, true, utf8ToHex(context), { from: challenger })
   console.log(`Challenged action ID ${ actionId }`)
 }
