@@ -85,7 +85,7 @@ const BRIGHTID_SETTINGS = [BRIGHTID_VERIFICATIONS_REQUIRED, BRIGHTID_REGISTRATIO
 
 // Create dao transaction two config
 const BLOCKS_PER_YEAR = 31557600 / 15 // seconds per year divided by 15 (assumes 15 second average block time) set to 5 for xdai
-const ISSUANCE_RATE = 3e16 / BLOCKS_PER_YEAR // per Block Inflation Rate 30%
+const ISSUANCE_RATE = 30e16 / BLOCKS_PER_YEAR // per Block Inflation Rate 30%
 const STABLE_TOKEN_ADDRESS = "0xa1841b2A23C894712c426833116B0362DE929546"
 const STABLE_TOKEN_ORACLE = "0xeC99dd9362E86299013bDE76E878ded1db1fab90"
 const DECAY = 9999799 // 48 hours halftime. 9999599 = 3 days halftime. halftime_alpha = (1/2)**(1/t)
@@ -107,7 +107,7 @@ const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
 
 const networkDependantConfig = {
   rinkeby: {
-    ARBITRATOR: "0x889348bf54Be41F3358B4e6aD30Ad858280B068c",
+    ARBITRATOR: "0xabfA51EBb58b1315B9B7EFaEeB77baE032fAB7f3",
     STAKING_FACTORY: "0x07429001eeA415E967C57B8d43484233d57F8b0B",
     FEE_TOKEN: "0x6644F3Afb267273c60D3308b62afB36F98f158f9", // Using HNY token from celeste deployment
     HNY_TOKEN: "0x6644F3Afb267273c60D3308b62afB36F98f158f9"
