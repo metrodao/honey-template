@@ -1,16 +1,15 @@
-# Honey Template
+# Leaf Template
 
-Aragon DAO Template for continuous issuance and bottom up fund allocation. Used as the base for Honey, 1Hive's community currency. 
+Aragon DAO Template for converting any ERC20 into a governance token for bottom up fund allocation. 
 
 ## Local deployment
 
 This template depends on a number of yet to be published apps, so to develop locally you must deploy those applications first.
 
 *  Conviction Voting (Latest version with hooks)
-*  Hooked Token Manager (Latest version)
+*  Hooked Token Wrapper (Latest version)
 *  Dandelion Voting (Latest version with hooks)
 *  Tollgate
-*  Issuance
 
 ## Rinkeby deployment using previously deployed template
 
