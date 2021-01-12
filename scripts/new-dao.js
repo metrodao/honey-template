@@ -4,7 +4,7 @@ const HoneyPotTemplate = artifacts.require("HoneyPotTemplate")
 const MiniMeToken = artifacts.require("MiniMeToken")
 const HookedTokenManager = artifacts.require("IHookedTokenManager")
 
-const { pct16, bn, getEventArgument, ONE_DAY } = require('@aragon/contract-helpers-test')
+const { pct16, bn, bigExp, getEventArgument, ONE_DAY } = require('@aragon/contract-helpers-test')
 
 const FROM_ACCOUNT = "0xdf456B614fE9FF1C7c0B380330Da29C96d40FB02"
 const CONFIG_FILE_PATH = '../mock-actions/src/rinkeby-config.json' // Change this for xdai deployment
@@ -47,6 +47,7 @@ const getAccount = async () => {
 }
 
 const ONE_HUNDRED_PERCENT = 1e18
+const ISSUANCE_ONE_HUNDRED_PERCENT = 1e10
 const ONE_TOKEN = 1e18
 
 // Create dao transaction one config
@@ -84,8 +85,8 @@ const BRIGHTID_SETTINGS = [BRIGHTID_VERIFICATIONS_REQUIRED, BRIGHTID_REGISTRATIO
   BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE]
 
 // Create dao transaction two config
-const BLOCKS_PER_YEAR = 31557600 / 15 // seconds per year divided by 15 (assumes 15 second average block time) set to 5 for xdai
-const ISSUANCE_RATE = 30e16 / BLOCKS_PER_YEAR // per Block Inflation Rate 30%
+const ISSUANCE_TARGET_RATIO = 0.2 * ISSUANCE_ONE_HUNDRED_PERCENT // 20% of the total supply
+const ISSUANCE_MAX_ADJUSTMENT_PER_SECOND = ONE_TOKEN
 const STABLE_TOKEN_ADDRESS = "0xa1841b2A23C894712c426833116B0362DE929546"
 const STABLE_TOKEN_ORACLE = "0xeC99dd9362E86299013bDE76E878ded1db1fab90"
 const DECAY = 9999799 // 48 hours halftime. 9999599 = 3 days halftime. halftime_alpha = (1/2)**(1/t)
@@ -95,22 +96,22 @@ const MAX_RATIO = 1000000 // 10 percent
 const WEIGHT = 2500
 const MIN_THRESHOLD_STAKE_PERCENTAGE = 0.2 * ONE_HUNDRED_PERCENT
 const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT, MIN_THRESHOLD_STAKE_PERCENTAGE]
+const CONVICTION_VOTING_PAUSE_ADMIN = FROM_ACCOUNT
 
 // Create dao transaction three config
 const SET_APP_FEES_CASHIER = false
-const AGREEMENT_TITLE = "1Hive Covenant"
-const AGREEMENT_CONTENT = "ipfs:QmPvfWUNt3WrZ7uaB1ZwEmec3Zr1ABL9CncSDfQypWkmnp" // Copied from Aragon Network, not 1hive related
+const AGREEMENT_TITLE = "1Hive Community Covenant"
+const AGREEMENT_CONTENT = "ipfs:QmfWppqC55Xc7PU48vei2XvVAuH76z2rNFF7JMUhjVM5xV"
 const CHALLENGE_DURATION = 3 * ONE_DAY
-const ACTION_AMOUNT = 0
-const CHALLENGE_AMOUNT = 0
+const ACTION_AMOUNT = 0.1 * ONE_TOKEN
+const CHALLENGE_AMOUNT = 0.1 * ONE_TOKEN
 const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
 
 const networkDependantConfig = {
   rinkeby: {
-    ARBITRATOR: "0xabfA51EBb58b1315B9B7EFaEeB77baE032fAB7f3",
-    STAKING_FACTORY: "0x07429001eeA415E967C57B8d43484233d57F8b0B",
-    FEE_TOKEN: "0x6644F3Afb267273c60D3308b62afB36F98f158f9", // Using HNY token from celeste deployment
-    HNY_TOKEN: "0x6644F3Afb267273c60D3308b62afB36F98f158f9"
+    ARBITRATOR: "0x58D3ED2f1D444d78441527718715A79013aA0249",
+    STAKING_FACTORY: "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
+    FEE_TOKEN: "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1" // Using HNY token from celeste deployment
   },
   xdai: {
     STAKING_FACTORY: "0xe71331AEf803BaeC606423B105e4d1C85f012C00" // Deployed 11/10/20
@@ -131,7 +132,7 @@ module.exports = async (callback) => {
 const createDao = async (honeyPotTemplate) => {
   console.log(`Creating DAO...`)
   const createDaoTxOneReceipt = await honeyPotTemplate.createDaoTxOne(
-    getNetworkDependantConfig().HNY_TOKEN,
+    getNetworkDependantConfig().FEE_TOKEN,
     VOTING_SETTINGS,
     BRIGHTID_1HIVE_CONTEXT,
     BRIGHTID_VERIFIER_ADDRESSES,
@@ -164,11 +165,13 @@ const createDao = async (honeyPotTemplate) => {
     brightIdRegisterAddress,
     hookedTokenManagerAddress,
     vaultAddress,
-    agentAddress
+    agentAddress,
+    voteTokenAddress: tokenAddress
   }
   fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
 
-  const voteToken = await MiniMeToken.at(getNetworkDependantConfig().HNY_TOKEN);
+  const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
+  // const voteToken = await MiniMeToken.at(tokenAddress);
   if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
     console.log(`Setting token controller to hooked token manager...`)
     await voteToken.changeController(hookedTokenManagerAddress)
@@ -184,9 +187,9 @@ const createDao = async (honeyPotTemplate) => {
 const finaliseDao = async (honeyPotTemplate) => {
   console.log(`Finalising DAO...`)
   const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
-    ISSUANCE_RATE,
+    [ISSUANCE_TARGET_RATIO, ISSUANCE_MAX_ADJUSTMENT_PER_SECOND],
     STABLE_TOKEN_ADDRESS,
-    STABLE_TOKEN_ORACLE,
+    [STABLE_TOKEN_ORACLE, CONVICTION_VOTING_PAUSE_ADMIN],
     CONVICTION_SETTINGS
   )
 

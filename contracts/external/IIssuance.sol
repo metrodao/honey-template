@@ -2,10 +2,12 @@ pragma solidity ^0.4.24;
 
 contract IIssuance {
 
-    bytes32 constant public ADD_POLICY_ROLE = keccak256("ADD_POLICY_ROLE");
-    bytes32 constant public REMOVE_POLICY_ROLE = keccak256("REMOVE_POLICY_ROLE");
+    bytes32 constant public UPDATE_SETTINGS_ROLE = keccak256("UPDATE_SETTINGS_ROLE");
 
-    function initialize(address _tokenManager) public;
-
-    function addPolicy(address _beneficiary, uint256 _blockInflationRate) external;
+    function initialize(
+        address _commonPoolTokenManager,
+        address _commonPoolVault,
+        uint256 _targetRatio,
+        uint256 _maxAdjustmentRatioPerSecond
+    );
 }

@@ -19,7 +19,7 @@ contract HoneyPotTemplate is BaseTemplate {
     // rinkeby
      bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-conviction-voting")));
      bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
-     bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("issuance")));
+     bytes32 private constant DYNAMIC_ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dynamic-issuance")));
      bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register")));
      bytes32 private constant AGREEMENT_APP_ID = 0x41dd0b999b443a19321f2f34fe8078d1af95a1487b49af4c2ca57fb9e3e5331e; // agreement-1hive.open.aragonpm.eth
      bytes32 private constant DISPUTABLE_VOTING_APP_ID = 0x39aa9e500efe56efda203714d12c78959ecbf71223162614ab5b56eaba014145; // probably disputable-voting.open.aragonpm.eth
@@ -27,7 +27,7 @@ contract HoneyPotTemplate is BaseTemplate {
     // xdai // TODO: Remove the Change Controller Permission
 //    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("conviction-voting")));
 //    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("token-manager")));
-//    bytes32 private constant ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("issuance")));
+//    bytes32 private constant DYNAMIC_ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("issuance")));
 
     uint256 private constant VAULT_INITIAL_FUNDS = 1000e18;
     bool private constant TOKEN_TRANSFERABLE = true;
@@ -112,13 +112,14 @@ contract HoneyPotTemplate is BaseTemplate {
 
     /**
     * @dev Add and initialise issuance and conviction voting
-    * @param _issuanceRate Percentage of the token's total supply that will be issued per block (expressed as a percentage of 10^18; eg. 10^16 = 1%, 10^18 = 100%)
-    * @param _convictionSettings array of conviction settings: decay, max_ratio, weight and min_threshold_stake_percentage
+    * @param _issuanceSettings Array of issuance settings: [targetRatio, maxAdjustmentRatioPerSecond]
+    * @param _setupAddresses Array of addresses: [stableTokenOracle, convictionVotingPauseAdmin]
+    * @param _convictionSettings array of conviction settings: [decay, max_ratio, weight, min_threshold_stake_percentage]
     */
     function createDaoTxTwo(
-        uint256 _issuanceRate,
+        uint256[2] _issuanceSettings,
         ERC20 _stableToken,
-        address _stableTokenOracle,
+        address[2] _setupAddresses,
         uint64[4] _convictionSettings
     )
         public
@@ -133,6 +134,7 @@ contract HoneyPotTemplate is BaseTemplate {
         MiniMeToken voteToken) = _getDeployedContractsTxOne();
 
         // Must have set the token controller to the HookedTokenManager prior to executing this transaction
+        acl.createPermission(address(this), hookedTokenManager, hookedTokenManager.INIT_ROLE(), disputableVoting);
         hookedTokenManager.initialize(voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
 
         // TODO: Remove for prod
@@ -142,16 +144,13 @@ contract HoneyPotTemplate is BaseTemplate {
 //        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
 //        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
-        Issuance issuance = _installIssuance(dao, hookedTokenManager);
-        _createPermissionForTemplate(acl, issuance, issuance.ADD_POLICY_ROLE());
-        issuance.addPolicy(address(fundingPoolVault), _issuanceRate);
-        _removePermissionFromTemplate(acl, issuance, issuance.ADD_POLICY_ROLE());
+        Issuance issuance = _installIssuance(dao, hookedTokenManager, fundingPoolVault, _issuanceSettings);
         _createIssuancePermissions(acl, issuance, disputableVoting);
         _createHookedTokenManagerPermissions(acl, disputableVoting, hookedTokenManager, issuance);
 
         ConvictionVoting convictionVoting = _installConvictionVoting(dao, MiniMeToken(hookedTokenManager.token()),
-            _stableToken, _stableTokenOracle, fundingPoolVault, _convictionSettings);
-        _createConvictionVotingPermissions(acl, convictionVoting, disputableVoting);
+            _stableToken, _setupAddresses[0], fundingPoolVault, _convictionSettings);
+        _createConvictionVotingPermissions(acl, convictionVoting, disputableVoting, _setupAddresses[1]);
         _createVaultPermissions(acl, fundingPoolVault, convictionVoting, disputableVoting);
 
         _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.SET_HOOK_ROLE());
@@ -224,11 +223,16 @@ contract HoneyPotTemplate is BaseTemplate {
         return DisputableVoting(_installNonDefaultApp(_dao, DISPUTABLE_VOTING_APP_ID, initializeData));
     }
 
-    function _installIssuance(Kernel _dao, HookedTokenManager _hookedTokenManager)
-      internal returns (Issuance)
+    function _installIssuance(
+        Kernel _dao,
+        HookedTokenManager _hookedTokenManager,
+        Vault _fundingPoolVault,
+        uint256[2] _issuanceSettings
+    )
+        internal returns (Issuance)
     {
-        Issuance issuance = Issuance(_installNonDefaultApp(_dao, ISSUANCE_APP_ID));
-        issuance.initialize(_hookedTokenManager);
+        Issuance issuance = Issuance(_installNonDefaultApp(_dao, DYNAMIC_ISSUANCE_APP_ID));
+        issuance.initialize(_hookedTokenManager, _fundingPoolVault, _issuanceSettings[0], _issuanceSettings[1]);
         return issuance;
     }
 
@@ -275,15 +279,15 @@ contract HoneyPotTemplate is BaseTemplate {
     }
 
     function _createIssuancePermissions(ACL _acl, Issuance _issuance, DisputableVoting _disputableVoting) internal {
-        _acl.createPermission(_disputableVoting, _issuance, _issuance.ADD_POLICY_ROLE(), _disputableVoting);
-        _acl.createPermission(_disputableVoting, _issuance, _issuance.REMOVE_POLICY_ROLE(), _disputableVoting);
+        _acl.createPermission(_disputableVoting, _issuance, _issuance.UPDATE_SETTINGS_ROLE(), _disputableVoting);
     }
 
-    function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting, DisputableVoting _disputableVoting)
+    function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting, DisputableVoting _disputableVoting, address _pauseAdmin)
         internal
     {
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CHALLENGE_ROLE(), _disputableVoting);
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CREATE_PROPOSALS_ROLE(), _disputableVoting);
+        _acl.createPermission(_pauseAdmin, _convictionVoting, _convictionVoting.PAUSE_CONTRACT_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _convictionVoting, _convictionVoting.CANCEL_PROPOSALS_ROLE(), _disputableVoting);
         _acl.createPermission(_disputableVoting, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), _disputableVoting);
     }
@@ -292,10 +296,10 @@ contract HoneyPotTemplate is BaseTemplate {
         // TODO: Remove this permission for live deployment !!! ARGH !!!
         acl.createPermission(ANY_ENTITY, hookedTokenManager, hookedTokenManager.CHANGE_CONTROLLER_ROLE(), disputableVoting);
         acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.MINT_ROLE(), disputableVoting);
+        acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.BURN_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), disputableVoting);
-        // acl.createPermission(disputableVoting, hookedTokenManager, hookedTokenManager.BURN_ROLE(), disputableVoting);
     }
 
     function _createAgreementPermissions(ACL _acl, Agreement _agreement, address _grantee, address _manager) internal {

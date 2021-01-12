@@ -2,6 +2,7 @@ pragma solidity ^0.4.0;
 
 contract IHookedTokenManager {
 
+    bytes32 public constant INIT_ROLE = keccak256("INIT_ROLE");
     bytes32 public constant CHANGE_CONTROLLER_ROLE = keccak256("CHANGE_CONTROLLER_ROLE");
     bytes32 public constant MINT_ROLE = keccak256("MINT_ROLE");
     bytes32 public constant ISSUE_ROLE = keccak256("ISSUE_ROLE");
