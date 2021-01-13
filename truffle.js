@@ -33,9 +33,9 @@ const providerForNetwork = (network) => (
   () => {
     let { rpc, keys } = settingsForNetwork(network)
 
-    rpc = rpc || defaultRPC(network)
+    rpc = rpc || defaultRPC(network)
 
-    if (!keys || keys.length == 0) {
+    if (!keys || keys.length == 0) {
       return new HDWalletProvider(mnemonic(), rpc)
     }
 
@@ -98,15 +98,10 @@ module.exports = {
     },
   },
   build: {},
-  compilers: {
-    solc: {
-      version: "0.4.24",
-      settings: {
-        optimizer: {
-          enabled: true,
-          runs: 1
-        }
-      }
+  solc: {
+    optimizer: {
+      enabled: true,
+      runs: 1,
     }
   }
 }

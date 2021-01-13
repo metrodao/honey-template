@@ -14,7 +14,7 @@ This template depends on a number of yet to be published apps, so to develop loc
 
 ## Rinkeby deployment using previously deployed template
 
-To deploy a Karma DAO to Rinkeby:
+To deploy a Honey Pot DAO to Rinkeby:
 
 1) Install dependencies:
 ```
@@ -28,8 +28,8 @@ $ npx truffle compile
 
 3) Configure your DAO in: `scripts/new-dao.js`
 
-4) Deploy a DAO to Rinkeby (requires a Rinkeby account accessible by the truffle script as documented here:
-https://hack.aragon.org/docs/cli-intro#set-a-private-key):
+4) Deploy a DAO to Rinkeby (requires 2 Rinkeby accounts accessible by the truffle script as documented here:
+https://hack.aragon.org/docs/cli-intro#set-a-private-key, add 2 private keys):
 ```
 $ npx truffle exec scripts/new-dao.js --network rinkeby
 ```

@@ -1,0 +1,22 @@
+{
+  "daoAddress": "0x635714f986a625439f0f74090c01b306683c81ce",
+  "convictionVoting": {
+    "proxy": "0x6f433308e2a092f269028f4b220bbc22b5230194"
+  },
+  "arbitrator": "0x5B987B7a303894AFD23063B02c5Ee39E1F02306e",
+  "stakingFactory": "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
+  "setFeesCashier": false,
+  "feeToken": "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1",
+  "agreement": {
+    "base": "0x90d878b0C7E5d72D15bDF76B79D1B0C8EacbC38c",
+    "proxy": "0x8a9893db28fe41bcafc07c9c4da73a6a85d3732c",
+    "appId": "0x15a969a0e134d745b604fb43f699bb5c146424792084c198d53050c4d08126d1",
+    "content": "ipfs:QmfWppqC55Xc7PU48vei2XvVAuH76z2rNFF7JMUhjVM5xV"
+  },
+  "brightIdRegisterAddress": "0xc4841272033320735b11c4afb75c261ef6d8f3ec",
+  "agentAddress": "0xd1f3b03f07618c1c16814606d1cc5e05e0ded5c5",
+  "hookedTokenManagerAddress": "0x929145b017bcf55cc6b8c184bb8b657f48fc24f6",
+  "disputableVotingAddress": "0x3926843504456ece3706339a296693fb735f5493",
+  "vaultAddress": "0x06109c1ec70ac2e51d121d7bf0ff332ecb5ed2e4",
+  "voteTokenAddress": "0xb0f6d3da7a277ce9d0cbd91705d936ad8e5f4ea1"
+}

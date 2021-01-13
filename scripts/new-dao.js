@@ -1,17 +1,24 @@
-const KarmaTemplate = artifacts.require("KarmaTemplate")
-const Token = artifacts.require("Token")
+const fs = require('fs')
+const path = require("path");
+const HoneyPotTemplate = artifacts.require("HoneyPotTemplate")
+const MiniMeToken = artifacts.require("MiniMeToken")
+const HookedTokenManager = artifacts.require("IHookedTokenManager")
 
-const DAO_ID = "karma" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
-const TOKEN_OWNER = "0x625236038836CecC532664915BD0399647E7826b"
+const { pct16, bn, bigExp, getEventArgument, ONE_DAY } = require('@aragon/contract-helpers-test')
+
+const FROM_ACCOUNT = "0xdf456B614fE9FF1C7c0B380330Da29C96d40FB02"
+const CONFIG_FILE_PATH = '../mock-actions/src/rinkeby-config.json' // Change this for xdai deployment
+const DAO_ID = "honey-pot" + Math.random() // Note this must be unique for each deployment, change it for subsequent deployments
 const NETWORK_ARG = "--network"
 const DAO_ID_ARG = "--daoid"
 
 const argValue = (arg, defaultValue) => process.argv.includes(arg) ? process.argv[process.argv.indexOf(arg) + 1] : defaultValue
+const getLogParameter = (receipt, log, parameter) => receipt.logs.find(x => x.event === log).args[parameter]
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
 
-const karmaTemplateAddress = () => {
+const honeyTemplateAddress = () => {
   if (network() === "rinkeby") {
     const Arapp = require("../arapp")
     return Arapp.environments.rinkeby.address
@@ -27,58 +34,194 @@ const karmaTemplateAddress = () => {
   }
 }
 
-const DAYS = 24 * 60 * 60
+const getNetworkDependantConfig = () => {
+  if (network() === "rinkeby") {
+    return networkDependantConfig.rinkeby
+  } else if (network() === "xdai") {
+    return networkDependantConfig.xdai
+  }
+}
+
+const getAccount = async () => {
+  return (await web3.eth.getAccounts())[0]
+}
+
 const ONE_HUNDRED_PERCENT = 1e18
+const ISSUANCE_ONE_HUNDRED_PERCENT = 1e10
 const ONE_TOKEN = 1e18
-const FUNDRAISING_ONE_HUNDRED_PERCENT = 1e6
-const FUNDRAISING_ONE_TOKEN = 1e6
 
 // Create dao transaction one config
-const ORG_TOKEN_NAME = "Honey"
-const ORG_TOKEN_SYMBOL = "HNY"
-const SUPPORT_REQUIRED = 0.5 * ONE_HUNDRED_PERCENT
-const MIN_ACCEPTANCE_QUORUM = 0.1 * ONE_HUNDRED_PERCENT
-const VOTE_DURATION_BLOCKS = 241920 // ~14 days
-const VOTE_BUFFER_BLOCKS = 5760 // 8 hours
-const VOTE_EXECUTION_DELAY_BLOCKS = 34560 // 48 hours
-const VOTING_SETTINGS = [SUPPORT_REQUIRED, MIN_ACCEPTANCE_QUORUM, VOTE_DURATION_BLOCKS, VOTE_BUFFER_BLOCKS, VOTE_EXECUTION_DELAY_BLOCKS]
-const HOLDERS = ["0x625236038836CecC532664915BD0399647E7826b", "0xa328500Eab25698b8b146D195F35f5b26C93AAEe","0xdf8f53B9f83e611e1154402992c6F6CB7Daf246c","0x5141970563C7d70a129A05f575e9e34DF4bD81d8","0xB24b54FE5a3ADcB4cb3B27d31B6C7f7E9F6A73a7", "0x60a9372862bD752CD02D9AE482F94Cd2fe92A0Bf", "0xf632Ce27Ea72deA30d30C1A9700B6b3bCeAA05cF", "0xB4eF7Ef49B81eb138106ED891570E07bf29Aaba2", "0x6bCE4F3aD3A9b9e98982E94Da3352C94d06dFCB1", "0x5EE3715Ca6063010De18BC55b5a2B0f10ab91aC2", "0x75B98710D5995AB9992F02492B7568b43133161D", "0xb18B276815d90e86EF0878E6ff57f765Ef444E8d", "0x81aaA9a7a8358cC2971B9b8dE72aCCe6d7862BC8", "0x95D9bED31423eb7d5B68511E0352Eae39a3CDD20", "0x839395e20bbB182fa440d08F850E6c7A8f6F0780", "0xDF290293C4A4d6eBe38Fd7085d7721041f927E0a", "0x778549Eb292AC98A96a05E122967f22eFA003707", "0x4194cE73AC3FBBeCE8fFa878c2B5A8C90333E724", "0x83E57888cd55C3ea1cfbf0114C963564d81e318d", "0x00862A702fDF600c4446D847341fDFAdAddAAbB0", "0x0f10f27fbE3622e7d4BdF1f141c6E50Ed8845AF6", "0xfA3D9807bFb82dD67Ed2f83E905DF63B8DA9E23f", "0x352346b3628529c29585bFD0aE0382bD5E49382b", "0xBFc7CAE0Fad9B346270Ae8fde24827D2D779eF07", "0x1338c277e03fbE9D6B1b3b655f0E567C0dCAAc4a", "0xCac20E53C2bF16BCC5251f5Ab98783C0DA1edBCE", "0xdC0046B52e2E38AEe2271B6171ebb65cCD337518", "0x5A47e860cC1EA1DBc87b54dAdcC7752957cC7AaC"  ]
-const STAKES = [8048.39e18, 2351.43e18, 2020.93e18, 1768.51e18, 1513.63e18, 1264.93e18, 1070.26e18, 450.19e18, 355.26e18, 293.86e18, 261.62e18, 219.22e18, 186.96e18, 147.43e18, 139.08e18, 126.4e18, 113.06e18, 103.16e18, 98.72e18, 90.66e18, 75.67e18, 72.67e18, 50e18, 50e18, 49.11e18, 38.97e18, 33.86e18, 30.27e18]
+// const VOTE_DURATION = ONE_DAY * 5
+// const VOTE_SUPPORT_REQUIRED = pct16(50)
+// const VOTE_MIN_ACCEPTANCE_QUORUM =  pct16(10)
+// const VOTE_DELEGATED_VOTING_PERIOD = ONE_DAY * 2
+// const VOTE_QUIET_ENDING_PERIOD = ONE_DAY
+// const VOTE_QUIET_ENDING_EXTENSION = ONE_DAY / 2
+// const VOTE_EXECUTION_DELAY = 1000
+// const VOTING_SETTINGS = [VOTE_DURATION, VOTE_SUPPORT_REQUIRED, VOTE_MIN_ACCEPTANCE_QUORUM,
+//   VOTE_DELEGATED_VOTING_PERIOD, VOTE_QUIET_ENDING_PERIOD, VOTE_QUIET_ENDING_EXTENSION, VOTE_EXECUTION_DELAY]
+// const BRIGHTID_1HIVE_CONTEXT = "0x3168697665000000000000000000000000000000000000000000000000000000"
+// const BRIGHTID_VERIFIER_ADDRESSES = ["0xead9c93b79ae7c1591b1fb5323bd777e86e150d4"]
+// const BRIGHTID_VERIFICATIONS_REQUIRED = 1
+// const BRIGHTID_REGISTRATION_PERIOD = 30 * ONE_DAY
+// const BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE = ONE_DAY
+
+// Rinkeby transaction one config
+const VOTE_DURATION = 60 * 3
+const VOTE_SUPPORT_REQUIRED = pct16(50)
+const VOTE_MIN_ACCEPTANCE_QUORUM =  pct16(10)
+const VOTE_DELEGATED_VOTING_PERIOD = 60 * 2
+const VOTE_QUIET_ENDING_PERIOD = 60
+const VOTE_QUIET_ENDING_EXTENSION = 59
+const VOTE_EXECUTION_DELAY = 60
+const VOTING_SETTINGS = [VOTE_DURATION, VOTE_SUPPORT_REQUIRED, VOTE_MIN_ACCEPTANCE_QUORUM,
+  VOTE_DELEGATED_VOTING_PERIOD, VOTE_QUIET_ENDING_PERIOD, VOTE_QUIET_ENDING_EXTENSION, VOTE_EXECUTION_DELAY]
+const BRIGHTID_1HIVE_CONTEXT = "0x3168697665000000000000000000000000000000000000000000000000000000"
+const BRIGHTID_VERIFIER_ADDRESSES = ["0xead9c93b79ae7c1591b1fb5323bd777e86e150d4"]
+const BRIGHTID_VERIFICATIONS_REQUIRED = 1
+const BRIGHTID_REGISTRATION_PERIOD = ONE_DAY * 10
+const BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE = ONE_DAY
+const BRIGHTID_SETTINGS = [BRIGHTID_VERIFICATIONS_REQUIRED, BRIGHTID_REGISTRATION_PERIOD,
+  BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE]
 
 // Create dao transaction two config
-const TOLLGATE_FEE = ONE_TOKEN * 100
-const BLOCKS_PER_YEAR = 31557600 / 5 // seeconds per year divided by 5 (assumes 5 second average block time)
-const ISSUANCE_RATE = 60e18 / BLOCKS_PER_YEAR // per Block Inflation Rate
-// const DECAY = 9999599 // 3 days halftime. halftime_alpha = (1/2)**(1/t)
-const DECAY= 9999799 // 48 hours halftime
+const ISSUANCE_TARGET_RATIO = 0.2 * ISSUANCE_ONE_HUNDRED_PERCENT // 20% of the total supply
+const ISSUANCE_MAX_ADJUSTMENT_PER_SECOND = ONE_TOKEN
+const STABLE_TOKEN_ADDRESS = "0xa1841b2A23C894712c426833116B0362DE929546"
+const STABLE_TOKEN_ORACLE = "0xeC99dd9362E86299013bDE76E878ded1db1fab90"
+const DECAY = 9999799 // 48 hours halftime. 9999599 = 3 days halftime. halftime_alpha = (1/2)**(1/t)
 const MAX_RATIO = 1000000 // 10 percent
-const MIN_THRESHOLD = 0.025 // two and a half a percent
-const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD / 10000000 // determine weight based on MAX_RATIO and MIN_THRESHOLD
-const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT]
+// const MIN_THRESHOLD = 0.01 // half a percent
+// const WEIGHT = MAX_RATIO ** 2 * MIN_THRESHOLD / 10000000 // determine weight based on MAX_RATIO and MIN_THRESHOLD
+const WEIGHT = 2500
+const MIN_THRESHOLD_STAKE_PERCENTAGE = 0.2 * ONE_HUNDRED_PERCENT
+const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT, MIN_THRESHOLD_STAKE_PERCENTAGE]
+const CONVICTION_VOTING_PAUSE_ADMIN = FROM_ACCOUNT
+
+// Create dao transaction three config
+const SET_APP_FEES_CASHIER = false
+const AGREEMENT_TITLE = "1Hive Community Covenant"
+const AGREEMENT_CONTENT = "ipfs:QmfWppqC55Xc7PU48vei2XvVAuH76z2rNFF7JMUhjVM5xV"
+const CHALLENGE_DURATION = 3 * ONE_DAY
+const ACTION_AMOUNT = 0.1 * ONE_TOKEN
+const CHALLENGE_AMOUNT = 0.1 * ONE_TOKEN
+const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
+
+const networkDependantConfig = {
+  rinkeby: {
+    ARBITRATOR: "0x5B987B7a303894AFD23063B02c5Ee39E1F02306e",
+    STAKING_FACTORY: "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
+    FEE_TOKEN: "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1" // Using HNY token from celeste deployment
+  },
+  xdai: {
+    STAKING_FACTORY: "0xe71331AEf803BaeC606423B105e4d1C85f012C00" // Deployed 11/10/20
+  }
+}
 
 module.exports = async (callback) => {
   try {
-    const karmaTemplate = await KarmaTemplate.at(karmaTemplateAddress())
-
-    const createDaoTxOneReceipt = await karmaTemplate.createDaoTxOne(
-      ORG_TOKEN_NAME,
-      ORG_TOKEN_SYMBOL,
-      HOLDERS,
-      STAKES,
-      VOTING_SETTINGS
-    );
-    console.log(`Tx One Complete. DAO address: ${createDaoTxOneReceipt.logs.find(x => x.event === "DeployDao").args.dao} Gas used: ${createDaoTxOneReceipt.receipt.gasUsed} `)
-
-    const createDaoTxTwoReceipt = await karmaTemplate.createDaoTxTwo(
-      TOLLGATE_FEE,
-      ISSUANCE_RATE,
-      CONVICTION_SETTINGS
-    )
-    console.log(`Tx Two Complete. Gas used: ${createDaoTxTwoReceipt.receipt.gasUsed}`)
-
-
+    const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
+    // await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
+    await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config
   } catch (error) {
     console.log(error)
   }
   callback()
+}
+
+const createDao = async (honeyPotTemplate) => {
+  console.log(`Creating DAO...`)
+  const createDaoTxOneReceipt = await honeyPotTemplate.createDaoTxOne(
+    getNetworkDependantConfig().FEE_TOKEN,
+    VOTING_SETTINGS,
+    BRIGHTID_1HIVE_CONTEXT,
+    BRIGHTID_VERIFIER_ADDRESSES,
+    BRIGHTID_SETTINGS
+  )
+
+  const daoAddress = getLogParameter(createDaoTxOneReceipt, "DeployDao", "dao")
+  const disputableVotingAddress = getLogParameter(createDaoTxOneReceipt, "DisputableVotingAddress", "disputableVoting")
+  const tokenAddress = getLogParameter(createDaoTxOneReceipt, "VoteToken", "voteToken")
+  const hookedTokenManagerAddress = getLogParameter(createDaoTxOneReceipt, "HookedTokenManagerAddress", "hookedTokenManagerAddress")
+  const vaultAddress = getLogParameter(createDaoTxOneReceipt, "VaultAddress", "vaultAddress")
+  const agentAddress = getLogParameter(createDaoTxOneReceipt, "AgentAddress", "agentAddress")
+  const brightIdRegisterAddress = getLogParameter(createDaoTxOneReceipt, "BrightIdRegisterAddress", "brightIdRegister")
+  console.log(`Tx One Complete.
+    DAO address: ${ daoAddress }
+    Disputable Voting address: ${ disputableVotingAddress }
+    Token address: ${ tokenAddress }
+    Hooked Token Manager address: ${ hookedTokenManagerAddress }
+    Vault address: ${ vaultAddress }
+    Agent address: ${ agentAddress }
+    BrightId Register address: ${ brightIdRegisterAddress }
+    Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
+
+  // Update config file
+  let oldConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+  let newConfig = {
+    ...oldConfig,
+    daoAddress,
+    disputableVotingAddress,
+    brightIdRegisterAddress,
+    hookedTokenManagerAddress,
+    vaultAddress,
+    agentAddress,
+    voteTokenAddress: tokenAddress
+  }
+  fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
+
+  const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
+  // const voteToken = await MiniMeToken.at(tokenAddress);
+  if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
+    console.log(`Setting token controller to hooked token manager...`)
+    await voteToken.changeController(hookedTokenManagerAddress)
+    console.log(`Token controller updated`)
+  } else {
+    const oldHookedTokenManager = await HookedTokenManager.at(await voteToken.controller())
+    console.log(`Updating token controller to hooked token manager from old token manager...`)
+    await oldHookedTokenManager.changeTokenController(hookedTokenManagerAddress)
+    console.log(`Token controller updated`)
+  }
+}
+
+const finaliseDao = async (honeyPotTemplate) => {
+  console.log(`Finalising DAO...`)
+  const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
+    [ISSUANCE_TARGET_RATIO, ISSUANCE_MAX_ADJUSTMENT_PER_SECOND],
+    STABLE_TOKEN_ADDRESS,
+    [STABLE_TOKEN_ORACLE, CONVICTION_VOTING_PAUSE_ADMIN],
+    CONVICTION_SETTINGS
+  )
+
+  const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
+  console.log(`Tx Two Complete.
+      Conviction Voting address: ${ convictionVotingProxy }
+      Gas used: ${ createDaoTxTwoReceipt.receipt.gasUsed }`)
+
+  const createDaoTxThreeReceipt = await honeyPotTemplate.createDaoTxThree(
+    getNetworkDependantConfig().ARBITRATOR,
+    SET_APP_FEES_CASHIER,
+    AGREEMENT_TITLE,
+    AGREEMENT_CONTENT,
+    getNetworkDependantConfig().STAKING_FACTORY,
+    getNetworkDependantConfig().FEE_TOKEN,
+    CHALLENGE_DURATION,
+    CONVICTION_VOTING_FEES
+  )
+
+  const agreementProxy = getLogParameter(createDaoTxThreeReceipt, "AgreementAddress", "agreement")
+  console.log(`Tx Three Complete.
+      Agreement address: ${ agreementProxy }
+      Gas used: ${ createDaoTxThreeReceipt.receipt.gasUsed }`)
+
+  // Update config file
+  currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, CONFIG_FILE_PATH)).toString())
+  newConfig = {
+    ...currentConfig,
+    arbitrator: getNetworkDependantConfig().ARBITRATOR,
+    feeToken: getNetworkDependantConfig().FEE_TOKEN,
+    convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy },
+    agreement: { ...currentConfig.agreement, proxy: agreementProxy }
+  }
+  fs.writeFileSync(path.resolve(__dirname, CONFIG_FILE_PATH), JSON.stringify(newConfig))
 }
