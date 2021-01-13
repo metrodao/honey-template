@@ -4,6 +4,9 @@ const { EMPTY_CALLS_SCRIPT } = require('@aragon/contract-helpers-test/src/aragon
 const { bn, bigExp, getEventArgument } = require('@aragon/contract-helpers-test')
 
 const REQUESTED_AMOUNT = bigExp(100, 18)
+const STAKE_AMOUNT = bigExp(2, 18)
+const MIN_BALANCE = bigExp(1, 18)
+const LARGE_AMOUNT = bigExp(100000, 18)
 
 module.exports = async (options = {}) => {
   const {
@@ -19,8 +22,34 @@ module.exports = async (options = {}) => {
     await agreement.sign(currentSettingId)
   }
 
+  await transferAndApproveBalances(options)
   await createConvictionVotingActions(beneficiary, agreement, convictionVoting, options)
   await createDisputableVotingActions(beneficiary, agreement, disputableVoting, options)
+}
+
+const transferAndApproveBalances = async (options) => {
+  const {
+    owner: beneficiary,
+    agreement: { proxy: agreement },
+    staking,
+    feeToken
+  } = options
+
+  const challangerBalance = await feeToken.balanceOf(await getChallenger())
+  if (challangerBalance.lt(MIN_BALANCE)) {
+    console.log(`Sending challanger fee tokens...`)
+    await feeToken.transfer(await getChallenger(), STAKE_AMOUNT)
+  }
+
+  if ((await staking.getBalancesOf(beneficiary)).staked.lt(MIN_BALANCE)) {
+    await approveFeeToken(feeToken, beneficiary, staking.address, LARGE_AMOUNT)
+    console.log(`Staking to stake manager...`)
+    await staking.stake(STAKE_AMOUNT, "0x0")
+  }
+  if ((await staking.getLock(beneficiary, agreement.address)).allowance.eq(bn(0))) {
+    console.log(`Allowing stake manager...`)
+    await staking.allowManager(agreement.address, LARGE_AMOUNT, "0x0")
+  }
 }
 
 const createConvictionVotingActions = async (beneficiary, agreement, convictionVoting, options) => {
@@ -85,16 +114,16 @@ async function challenge(agreement, actionId, context, options, disputableApp) {
 
   const { currentCollateralRequirementId } = await agreement.getDisputableInfo(disputableApp.address)
   const { collateralToken: collateralTokenAddress, challengeAmount } = await agreement.getCollateralRequirement(disputableApp.address, currentCollateralRequirementId)
-  console.log("Fee token address", feeToken.address)
-  const collateralToken = await getArtifacts().require("ERC20").at(collateralTokenAddress)
-  console.log(
-    "Collateral Token:", collateralTokenAddress,
-    "Challange Amount:", challengeAmount.toString(),
-    "Balance: ", (await collateralToken.balanceOf(challenger)).toString()
-  )
+  // console.log("Fee token address", feeToken.address)
+  // const collateralToken = await getArtifacts().require("ERC20").at(collateralTokenAddress)
+  // console.log(
+  //   "Collateral Token:", collateralTokenAddress,
+  //   "Challange Amount:", challengeAmount.toString(),
+  //   "Balance: ", (await collateralToken.balanceOf(challenger)).toString()
+  // )
 
   console.log("Challenger:", challenger, "Fee amount:", feeAmount.toString(), "Balance: ", (await feeToken.balanceOf(challenger)).toString())
-  await approveFeeToken(feeToken, challenger, agreement.address, feeAmount)
+  await approveFeeToken(feeToken, challenger, agreement.address, feeAmount.add(challengeAmount))
   console.log('Challenging action')
   // Make sure the challenger has funds to challenge, if new tokens they won't have.
   await agreement.challengeAction(actionId, 0, true, utf8ToHex(context), { from: challenger })
@@ -125,6 +154,9 @@ async function dispute(agreement, actionId, options) {
 
 async function approveFeeToken(token, from, to, amount) {
   const allowance = await token.allowance(from, to)
+  if (allowance.gt(amount)) {
+    return
+  }
   if (allowance.gt(bn(0))) {
     console.log("Removing previous approval...")
     await token.approve(to, 0, { from })

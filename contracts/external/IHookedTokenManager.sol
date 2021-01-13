@@ -20,4 +20,7 @@ contract IHookedTokenManager {
     function token() public returns (address);
 
     function registerHook(address _hook) external returns (uint256);
+
+    function hasInitialized() public view returns (bool);
+
 }

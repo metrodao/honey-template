@@ -175,7 +175,7 @@ contract HoneyPotTemplate is BaseTemplate {
     )
         public
     {
-        require(senderDeployedContracts[msg.sender].dao != address(0), ERROR_NO_CACHE);
+        require(senderDeployedContracts[msg.sender].hookedTokenManager.hasInitialized(), ERROR_NO_CACHE);
 
         (Kernel dao,
         ACL acl,

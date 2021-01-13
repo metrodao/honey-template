@@ -28,6 +28,10 @@ async function loadConfig(config) {
   options.agreement.proxy = await instanceOrEmpty(options.agreement.proxy, 'Agreement')
   options.feeToken = await getInstance('MiniMeToken', options.feeToken)
   options.arbitrator = await getInstance('IArbitratorCustom', options.arbitrator)
+  const stakingFactory = await getInstance('IStakingFactory', options.stakingFactory)
+  const stakingAddress = await stakingFactory.getInstance(options.feeToken.address)
+  console.log(`Staking address: ${stakingAddress}`)
+  options.staking = await getInstance('IStaking', stakingAddress)
 
   return options
 }

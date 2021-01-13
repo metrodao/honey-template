@@ -109,7 +109,7 @@ const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
 
 const networkDependantConfig = {
   rinkeby: {
-    ARBITRATOR: "0x58D3ED2f1D444d78441527718715A79013aA0249",
+    ARBITRATOR: "0x5B987B7a303894AFD23063B02c5Ee39E1F02306e",
     STAKING_FACTORY: "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
     FEE_TOKEN: "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1" // Using HNY token from celeste deployment
   },
@@ -121,7 +121,7 @@ const networkDependantConfig = {
 module.exports = async (callback) => {
   try {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
-    // await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config
+    // await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
     await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config
   } catch (error) {
     console.log(error)
