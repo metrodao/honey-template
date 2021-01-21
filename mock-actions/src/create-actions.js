@@ -41,7 +41,8 @@ const transferAndApproveBalances = async (options) => {
     await feeToken.transfer(await getChallenger(), STAKE_AMOUNT)
   }
 
-  if ((await staking.getBalancesOf(beneficiary)).staked.lt(MIN_BALANCE)) {
+  const totalStaked = (await staking.getBalancesOf(beneficiary)).staked
+  if (totalStaked.lt(MIN_BALANCE) || totalStaked.sub((await staking.getBalancesOf(beneficiary)).locked).lt(MIN_BALANCE)) {
     await approveFeeToken(feeToken, beneficiary, staking.address, LARGE_AMOUNT)
     console.log(`Staking to stake manager...`)
     await staking.stake(STAKE_AMOUNT, "0x0")
