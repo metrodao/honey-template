@@ -7,6 +7,7 @@ const REQUESTED_AMOUNT = bigExp(100, 18)
 const STAKE_AMOUNT = bigExp(2, 18)
 const MIN_BALANCE = bigExp(1, 18)
 const LARGE_AMOUNT = bigExp(100000, 18)
+const SETTLEMENT_AMOUNT = bigExp(1, 16)
 
 module.exports = async (options = {}) => {
   const {
@@ -127,7 +128,7 @@ async function challenge(agreement, actionId, context, options, disputableApp) {
   await approveFeeToken(feeToken, challenger, agreement.address, feeAmount.add(challengeAmount))
   console.log('Challenging action')
   // Make sure the challenger has funds to challenge, if new tokens they won't have.
-  await agreement.challengeAction(actionId, 0, true, utf8ToHex(context), { from: challenger })
+  await agreement.challengeAction(actionId, SETTLEMENT_AMOUNT, true, utf8ToHex(context), { from: challenger })
   console.log(`Challenged action ID ${ actionId }`)
 }
 

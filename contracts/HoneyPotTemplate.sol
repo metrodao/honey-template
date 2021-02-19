@@ -17,17 +17,20 @@ contract HoneyPotTemplate is BaseTemplate {
     string constant private ERROR_NO_TOLLGATE_TOKEN = "NO_TOLLGATE_TOKEN";
 
     // rinkeby
-     bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-conviction-voting")));
-     bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
-     bytes32 private constant DYNAMIC_ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dynamic-issuance")));
-     bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register")));
-     bytes32 private constant AGREEMENT_APP_ID = 0x41dd0b999b443a19321f2f34fe8078d1af95a1487b49af4c2ca57fb9e3e5331e; // agreement-1hive.open.aragonpm.eth
-     bytes32 private constant DISPUTABLE_VOTING_APP_ID = 0x39aa9e500efe56efda203714d12c78959ecbf71223162614ab5b56eaba014145; // probably disputable-voting.open.aragonpm.eth
+//     bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-conviction-voting")));
+//     bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("gardens-token-manager")));
+//     bytes32 private constant DYNAMIC_ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dynamic-issuance")));
+//     bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register")));
+//     bytes32 private constant AGREEMENT_APP_ID = 0x41dd0b999b443a19321f2f34fe8078d1af95a1487b49af4c2ca57fb9e3e5331e; // agreement-1hive.open.aragonpm.eth
+//     bytes32 private constant DISPUTABLE_VOTING_APP_ID = 0x39aa9e500efe56efda203714d12c78959ecbf71223162614ab5b56eaba014145; // probably disputable-voting.open.aragonpm.eth
 
     // xdai // TODO: Remove the Change Controller Permission
-//    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("conviction-voting")));
-//    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("token-manager")));
-//    bytes32 private constant DYNAMIC_ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("1hive"), keccak256("issuance")));
+    bytes32 private constant CONVICTION_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-conviction-voting"))); // Deployed
+    bytes32 private constant HOOKED_TOKEN_MANAGER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("hooked-token-manager-init-role"))); // Deployed
+    bytes32 private constant DYNAMIC_ISSUANCE_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("dynamic-issuance"))); // Deployed
+    bytes32 private constant BRIGHTID_REGISTER_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("brightid-register"))); // Deployed
+    bytes32 private constant AGREEMENT_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("agreement"))); // Deployed
+    bytes32 private constant DISPUTABLE_VOTING_APP_ID = keccak256(abi.encodePacked(apmNamehash("open"), keccak256("disputable-voting"))); // Deployed
 
     uint256 private constant VAULT_INITIAL_FUNDS = 1000e18;
     bool private constant TOKEN_TRANSFERABLE = true;
@@ -139,10 +142,10 @@ contract HoneyPotTemplate is BaseTemplate {
 
         // TODO: Remove for prod
         // Mint some initial funds for distribution via conviction voting and for creator. Only for testing, remove for prod.
-//        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
-//        hookedTokenManager.mint(msg.sender, 20000e18);
-//        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
-//        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+        _createPermissionForTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
+        hookedTokenManager.mint(msg.sender, 20000e18);
+        hookedTokenManager.mint(address(fundingPoolVault), VAULT_INITIAL_FUNDS);
+        _removePermissionFromTemplate(acl, hookedTokenManager, hookedTokenManager.MINT_ROLE());
 
         Issuance issuance = _installIssuance(dao, hookedTokenManager, fundingPoolVault, _issuanceSettings);
         _createIssuancePermissions(acl, issuance, disputableVoting);
@@ -252,6 +255,7 @@ contract HoneyPotTemplate is BaseTemplate {
         brightIdRegister.initialize(_1hiveContext, _verifiers, _brightIdSettings[0], _brightIdSettings[1], _brightIdSettings[2]);
         emit BrightIdRegisterAddress(brightIdRegister);
 
+        // TODO: ANY_ENTITY should be set to _disputableVoting
         _acl.createPermission(ANY_ENTITY, brightIdRegister, brightIdRegister.UPDATE_SETTINGS_ROLE(), _disputableVoting);
         return brightIdRegister;
     }
@@ -345,18 +349,5 @@ contract HoneyPotTemplate is BaseTemplate {
 
     function _deleteStoredContracts() internal {
         delete senderDeployedContracts[msg.sender];
-    }
-
-    // Oracle permissions with params functions //
-
-    function _setOracle(ACL _acl, address _who, address _where, bytes32 _what, address _oracle) private {
-        uint256[] memory params = new uint256[](1);
-        params[0] = _paramsTo256(ORACLE_PARAM_ID, uint8(Op.EQ), uint240(_oracle));
-
-        _acl.grantPermissionP(_who, _where, _what, params);
-    }
-
-    function _paramsTo256(uint8 _id,uint8 _op, uint240 _value) private returns (uint256) {
-        return (uint256(_id) << 248) + (uint256(_op) << 240) + _value;
     }
 }

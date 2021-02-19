@@ -72,10 +72,10 @@ module.exports = {
       provider: providerForNetwork('ropsten'),
       gas: 4.712e6
     },
-    xdai: {
+    xdai: { // To deploy Honey Pot Template to xDai you must add xDai to the config at @aragon/os/truffle-config. Alternatively follow through from deploy.js and search for Networks.
       network_id: 100,
       provider: providerForNetwork('xdai'),
-      gas: 95e5,
+      gas: 12000000,
       gasPrice: 1000000000
     },
     rinkeby: {

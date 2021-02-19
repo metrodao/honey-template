@@ -10,10 +10,10 @@
       "network": "devnet"
     },
     "xdai": {
-      "registry": "0xaafca6b0c89521752e559650206d7c925fd0e530",
-      "address": "0x9b321667c89cf888785413b89178b78dc67747c8",
-      "appName": "honey-pot-template.1hive.aragonpm.eth",
-      "network": "xdai"
+      "appName": "honey-pot-template.aragonpm.eth",
+      "address": "0x8ca04f6c6be2a2dbf77ddce5fd7a791f31c364ea",
+      "network": "xdai",
+      "registry": "0xaafca6b0c89521752e559650206d7c925fd0e530"
     },
     "rinkeby": {
       "appName": "honey-pot-template.aragonpm.eth",

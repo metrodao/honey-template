@@ -1,0 +1,9 @@
+{
+  "daoAddress": "0xa854b27530130340ecde96e061de7fdc650c1c32",
+  "disputableVotingAddress": "0xf9fb22fa162a20df776473710933feabaefcebc2",
+  "brightIdRegisterAddress": "0x58916e851c80d23909c3d6475030fed2c498e9e2",
+  "hookedTokenManagerAddress": "0x369cad2ca56c3815806d26cfcbdf0e747157d567",
+  "vaultAddress": "0x9910f633c79904232f982b9e3f9b2f1ec4bf5443",
+  "agentAddress": "0xd22b7588d28604d0034663600ffd40c9c347583e",
+  "voteTokenAddress": "0x5d65567792531df947696ca9b826d05206e50120"
+}
