@@ -2,7 +2,7 @@ const { utf8ToHex } = require('web3-utils')
 const { injectWeb3, injectArtifacts, bn, ONE_DAY } = require('@aragon/contract-helpers-test')
 
 const createActions = require('./create-actions')
-const config = require('./rinkeby-config.json')
+const config = require('../../output/rinkeby-config.json')
 
 module.exports = async (callback) => {
   injectWeb3(web3)
@@ -23,9 +23,9 @@ async function deploy() {
 async function loadConfig(config) {
   const options = config
   options.owner = (await web3.eth.getAccounts())[0]
-  options.convictionVoting.proxy = await instanceOrEmpty(options.convictionVoting.proxy, 'IConvictionVoting')
+  options.convictionVotingProxy = await instanceOrEmpty(options.convictionVotingProxy, 'IConvictionVoting')
   options.disputableVoting = await instanceOrEmpty(options.disputableVotingAddress, 'DisputableVoting')
-  options.agreement.proxy = await instanceOrEmpty(options.agreement.proxy, 'Agreement')
+  options.agreementProxy = await instanceOrEmpty(options.agreementProxy, 'Agreement')
   options.feeToken = await getInstance('MiniMeToken', options.feeToken)
   options.arbitrator = await getInstance('IArbitratorCustom', options.arbitrator)
   const stakingFactory = await getInstance('IStakingFactory', options.stakingFactory)

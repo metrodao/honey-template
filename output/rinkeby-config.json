@@ -1,1 +1,14 @@
-{}
+{
+  "daoAddress": "0x9886f4317fe42674d1a9d0cac97aa2cfa69247e1",
+  "disputableVotingAddress": "0x05fb05d70315cde1e9c3a026e81055d6f2811766",
+  "brightIdRegisterAddress": "0xeaed9896d5cf193441d5e8e685c244dcd0af2f0a",
+  "hookedTokenManagerAddress": "0x5a309759cef148afe5f2f65a3032564a34b3eb64",
+  "vaultAddress": "0x595a9bf6c9f9204e3dec8fe139041054b0de6a84",
+  "agentAddress": "0x800152268148d5169c2f6e67672ae223e48143f3",
+  "voteTokenAddress": "0xb0f6d3da7a277ce9d0cbd91705d936ad8e5f4ea1",
+  "convictionVotingProxy": "0x16ac9a05d59fcbe45bdb1faa4870268a8bd8e7a7",
+  "arbitrator": "0x7Ecb121a56BF92442289Dddb89b28A58640e76F5",
+  "feeToken": "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1",
+  "agreementProxy": "0xc08d59bfe2337d45fa5e77ad8d683fd5bdfcde95",
+  "stakingFactory": "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC"
+}

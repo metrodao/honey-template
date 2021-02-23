@@ -12,8 +12,8 @@ const SETTLEMENT_AMOUNT = bigExp(1, 16)
 module.exports = async (options = {}) => {
   const {
     owner: beneficiary,
-    agreement: { proxy: agreement },
-    convictionVoting: { proxy: convictionVoting },
+    agreementProxy: agreement,
+    convictionVotingProxy: convictionVoting ,
     disputableVoting
   } = options
 
@@ -31,7 +31,7 @@ module.exports = async (options = {}) => {
 const transferAndApproveBalances = async (options) => {
   const {
     owner: beneficiary,
-    agreement: { proxy: agreement },
+    agreementProxy: agreement ,
     staking,
     feeToken
   } = options

@@ -16,7 +16,7 @@ const getLogParameter = (receipt, log, parameter) => receipt.logs.find(x => x.ev
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
-const configFilePath = () => network() === "rinkeby" ? '../ouput/rinkeby-config.json' : '../output/xdai-config.json'
+const configFilePath = () => network() === "rinkeby" ? '../output/rinkeby-config.json' : '../output/xdai-config.json'
 
 const honeyTemplateAddress = () => {
   if (network() === "rinkeby") {
@@ -62,7 +62,7 @@ const ONE_TOKEN = 1e18
 // Rinkeby transaction one config
 const VOTE_DURATION = 60 * 3
 const VOTE_SUPPORT_REQUIRED = pct16(50)
-const VOTE_MIN_ACCEPTANCE_QUORUM =  pct16(10)
+const VOTE_MIN_ACCEPTANCE_QUORUM = pct16(10)
 const VOTE_DELEGATED_VOTING_PERIOD = 60 * 2
 const VOTE_QUIET_ENDING_PERIOD = 60
 const VOTE_QUIET_ENDING_EXTENSION = 59
@@ -99,7 +99,7 @@ const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
 
 const networkDependantConfig = {
   rinkeby: {
-    ARBITRATOR: "0x5B987B7a303894AFD23063B02c5Ee39E1F02306e",
+    ARBITRATOR: "0x7Ecb121a56BF92442289Dddb89b28A58640e76F5",
     STAKING_FACTORY: "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
     FEE_TOKEN: "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1", // Using HNY token from celeste deployment
     STABLE_TOKEN_ADDRESS: "0xb81Ec0132a75f78516Eb8A418D1D90d6d120Aa41",
@@ -131,8 +131,8 @@ module.exports = async (callback) => {
 const createDao = async (honeyPotTemplate) => {
   console.log(`Creating DAO...`)
   const createDaoTxOneReceipt = await honeyPotTemplate.createDaoTxOne(
-    // getNetworkDependantConfig().FEE_TOKEN,
-    0x0,
+    getNetworkDependantConfig().FEE_TOKEN,
+    // 0x0,
     VOTING_SETTINGS,
     BRIGHTID_1HIVE_CONTEXT,
     BRIGHTID_VERIFIER_ADDRESSES,
@@ -155,11 +155,7 @@ const createDao = async (honeyPotTemplate) => {
     Agent address: ${ agentAddress }
     BrightId Register address: ${ brightIdRegisterAddress }
     Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
-
-  // Update config file
-  let oldConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
-  let newConfig = {
-    ...oldConfig,
+  updateConfigFile({
     daoAddress,
     disputableVotingAddress,
     brightIdRegisterAddress,
@@ -167,11 +163,10 @@ const createDao = async (honeyPotTemplate) => {
     vaultAddress,
     agentAddress,
     voteTokenAddress: tokenAddress
-  }
-  fs.writeFileSync(path.resolve(__dirname, configFilePath()), JSON.stringify(newConfig))
+  })
 
-  // const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
-  const voteToken = await MiniMeToken.at(tokenAddress);
+  const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
+  // const voteToken = await MiniMeToken.at(tokenAddress);
   if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
     console.log(`Setting token controller to hooked token manager...`)
     await voteToken.changeController(hookedTokenManagerAddress)
@@ -197,8 +192,7 @@ const finaliseDao = async (honeyPotTemplate) => {
   console.log(`Tx Two Complete.
       Conviction Voting address: ${ convictionVotingProxy }
       Gas used: ${ createDaoTxTwoReceipt.receipt.gasUsed }`)
-
-  // TODO: Save proxy to config here...
+  updateConfigFile({ convictionVotingProxy: convictionVotingProxy })
 
   const createDaoTxThreeReceipt = await honeyPotTemplate.createDaoTxThree(
     getNetworkDependantConfig().ARBITRATOR,
@@ -215,15 +209,19 @@ const finaliseDao = async (honeyPotTemplate) => {
   console.log(`Tx Three Complete.
       Agreement address: ${ agreementProxy }
       Gas used: ${ createDaoTxThreeReceipt.receipt.gasUsed }`)
+  updateConfigFile({
+    arbitrator: getNetworkDependantConfig().ARBITRATOR,
+    feeToken: getNetworkDependantConfig().FEE_TOKEN,
+    agreementProxy: agreementProxy
+  })
+}
 
-  // Update config file
+const updateConfigFile = (addedConfig) => {
   currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
   newConfig = {
     ...currentConfig,
-    arbitrator: getNetworkDependantConfig().ARBITRATOR,
-    feeToken: getNetworkDependantConfig().FEE_TOKEN,
-    convictionVoting: { ...currentConfig.convictionVoting, proxy: convictionVotingProxy },
-    agreement: { ...currentConfig.agreement, proxy: agreementProxy }
+    ...addedConfig
   }
   fs.writeFileSync(path.resolve(__dirname, configFilePath()), JSON.stringify(newConfig))
 }
+
