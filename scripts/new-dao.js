@@ -51,28 +51,27 @@ const ISSUANCE_ONE_HUNDRED_PERCENT = 1e10
 const ONE_TOKEN = 1e18
 
 // xDai transaction one vote config
-// const VOTE_DURATION = ONE_DAY * 5
-// const VOTE_SUPPORT_REQUIRED = pct16(50)
-// const VOTE_MIN_ACCEPTANCE_QUORUM =  pct16(10)
-// const VOTE_DELEGATED_VOTING_PERIOD = ONE_DAY * 2
-// const VOTE_QUIET_ENDING_PERIOD = ONE_DAY
-// const VOTE_QUIET_ENDING_EXTENSION = ONE_DAY / 2
-// const VOTE_EXECUTION_DELAY = ONE_DAY
+const VOTE_DURATION = ONE_DAY * 5
+const VOTE_DELEGATED_VOTING_PERIOD = ONE_DAY * 2
+const VOTE_QUIET_ENDING_PERIOD = ONE_DAY
+const VOTE_QUIET_ENDING_EXTENSION = ONE_DAY / 2
+const VOTE_EXECUTION_DELAY = ONE_DAY
+const BRIGHTID_REGISTRATION_PERIOD = ONE_DAY * 30
 
 // Rinkeby transaction one config
-const VOTE_DURATION = 60 * 3
+// const VOTE_DURATION = 60 * 3
+// const VOTE_DELEGATED_VOTING_PERIOD = 60 * 2
+// const VOTE_QUIET_ENDING_PERIOD = 60
+// const VOTE_QUIET_ENDING_EXTENSION = 59
+// const VOTE_EXECUTION_DELAY = 60
 const VOTE_SUPPORT_REQUIRED = pct16(50)
 const VOTE_MIN_ACCEPTANCE_QUORUM = pct16(10)
-const VOTE_DELEGATED_VOTING_PERIOD = 60 * 2
-const VOTE_QUIET_ENDING_PERIOD = 60
-const VOTE_QUIET_ENDING_EXTENSION = 59
-const VOTE_EXECUTION_DELAY = 60
 const VOTING_SETTINGS = [VOTE_DURATION, VOTE_SUPPORT_REQUIRED, VOTE_MIN_ACCEPTANCE_QUORUM,
   VOTE_DELEGATED_VOTING_PERIOD, VOTE_QUIET_ENDING_PERIOD, VOTE_QUIET_ENDING_EXTENSION, VOTE_EXECUTION_DELAY]
 const BRIGHTID_1HIVE_CONTEXT = "0x3168697665000000000000000000000000000000000000000000000000000000"
 const BRIGHTID_VERIFIER_ADDRESSES = ["0x7A2122Dd08D80Ce6c52AbB623D41777BA8b1F36F"]
 const BRIGHTID_VERIFICATIONS_REQUIRED = 1
-const BRIGHTID_REGISTRATION_PERIOD = ONE_DAY // Update to 30 days for prod.
+// const BRIGHTID_REGISTRATION_PERIOD = ONE_DAY // Update to 30 days for prod.
 const BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE = ONE_DAY
 const BRIGHTID_SETTINGS = [BRIGHTID_VERIFICATIONS_REQUIRED, BRIGHTID_REGISTRATION_PERIOD,
   BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE]
@@ -108,11 +107,11 @@ const networkDependantConfig = {
   },
   xdai: {
     ARBITRATOR: "0xe71331AEf803BaeC606423B105e4d1C85f012C00", // NOT CORRECT! REPLACE
-    STAKING_FACTORY: "0xe71331AEf803BaeC606423B105e4d1C85f012C00", // Deployed 11/10/20
+    STAKING_FACTORY: "0xe71331AEf803BaeC606423B105e4d1C85f012C00",
     FEE_TOKEN: "0x5d65567792531df947696ca9b826d05206e50120", // TEMP NEWLY GENERATED FEE TOKEN
     // FEE_TOKEN: "0x6F937495013C7DC42aF752d3E0BcC090bd34F7AB",
     STABLE_TOKEN_ADDRESS: "0x09327b72157cFe804FEEe57dfCEb50A0CA1Af26a",
-    STABLE_TOKEN_ORACLE: "0x5af14598f309BdC15A1c74bAb98Fb8e7B90Fb99f",
+    STABLE_TOKEN_ORACLE: "0x8af13Ba3Fe8C4279D868DD0720f989EA03692E29",
     CONVICTION_VOTING_PAUSE_ADMIN: "0x878759bd8c99048352412a787f0f0c75013df863" // Bounty DAO Voting
   }
 }
@@ -120,7 +119,8 @@ const networkDependantConfig = {
 module.exports = async (callback) => {
   try {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
-    // await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
+    console.log(`Template address: `, honeyPotTemplate.address)
+    await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
     await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config. And stable token address and oracle if not already.
   } catch (error) {
     console.log(error)
@@ -143,7 +143,6 @@ const createDao = async (honeyPotTemplate) => {
   const disputableVotingAddress = getLogParameter(createDaoTxOneReceipt, "DisputableVotingAddress", "disputableVoting")
   const tokenAddress = getLogParameter(createDaoTxOneReceipt, "VoteToken", "voteToken")
   const hookedTokenManagerAddress = getLogParameter(createDaoTxOneReceipt, "HookedTokenManagerAddress", "hookedTokenManagerAddress")
-  const vaultAddress = getLogParameter(createDaoTxOneReceipt, "VaultAddress", "vaultAddress")
   const agentAddress = getLogParameter(createDaoTxOneReceipt, "AgentAddress", "agentAddress")
   const brightIdRegisterAddress = getLogParameter(createDaoTxOneReceipt, "BrightIdRegisterAddress", "brightIdRegister")
   console.log(`Tx One Complete.
@@ -151,7 +150,6 @@ const createDao = async (honeyPotTemplate) => {
     Disputable Voting address: ${ disputableVotingAddress }
     Token address: ${ tokenAddress }
     Hooked Token Manager address: ${ hookedTokenManagerAddress }
-    Vault address: ${ vaultAddress }
     Agent address: ${ agentAddress }
     BrightId Register address: ${ brightIdRegisterAddress }
     Gas used: ${ createDaoTxOneReceipt.receipt.gasUsed }`)
@@ -160,23 +158,9 @@ const createDao = async (honeyPotTemplate) => {
     disputableVotingAddress,
     brightIdRegisterAddress,
     hookedTokenManagerAddress,
-    vaultAddress,
     agentAddress,
     voteTokenAddress: tokenAddress
   })
-
-  const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
-  // const voteToken = await MiniMeToken.at(tokenAddress);
-  if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
-    console.log(`Setting token controller to hooked token manager...`)
-    await voteToken.changeController(hookedTokenManagerAddress)
-    console.log(`Token controller updated`)
-  } else {
-    const oldHookedTokenManager = await HookedTokenManager.at(await voteToken.controller())
-    console.log(`Updating token controller to hooked token manager from old token manager...`)
-    await oldHookedTokenManager.changeTokenController(hookedTokenManagerAddress)
-    console.log(`Token controller updated`)
-  }
 }
 
 const finaliseDao = async (honeyPotTemplate) => {
@@ -214,6 +198,19 @@ const finaliseDao = async (honeyPotTemplate) => {
     feeToken: getNetworkDependantConfig().FEE_TOKEN,
     agreementProxy: agreementProxy
   })
+
+  // const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
+  // // const voteToken = await MiniMeToken.at(tokenAddress);
+  // if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
+  //   console.log(`Setting token controller to hooked token manager...`)
+  //   await voteToken.changeController(hookedTokenManagerAddress)
+  //   console.log(`Token controller updated`)
+  // } else {
+  //   const oldHookedTokenManager = await HookedTokenManager.at(await voteToken.controller())
+  //   console.log(`Updating token controller to hooked token manager from old token manager...`)
+  //   await oldHookedTokenManager.changeTokenController(hookedTokenManagerAddress)
+  //   console.log(`Token controller updated`)
+  // }
 }
 
 const updateConfigFile = (addedConfig) => {
