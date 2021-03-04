@@ -1,9 +1,13 @@
 {
-  "daoAddress": "0xa854b27530130340ecde96e061de7fdc650c1c32",
-  "disputableVotingAddress": "0xf9fb22fa162a20df776473710933feabaefcebc2",
-  "brightIdRegisterAddress": "0x58916e851c80d23909c3d6475030fed2c498e9e2",
-  "hookedTokenManagerAddress": "0x369cad2ca56c3815806d26cfcbdf0e747157d567",
+  "daoAddress": "0x14cb5acb8685f54989d7d855eb8a106d28ff10d6",
+  "disputableVotingAddress": "0x844ca8013cbafdbbff37a06f2c95b876026e6094",
+  "brightIdRegisterAddress": "0x593b57be29614d2c5593c076d6419ca19ef87e2b",
+  "hookedTokenManagerAddress": "0x52d230f578e0df2e946edb56419348a7792a88c5",
   "vaultAddress": "0x9910f633c79904232f982b9e3f9b2f1ec4bf5443",
-  "agentAddress": "0xd22b7588d28604d0034663600ffd40c9c347583e",
-  "voteTokenAddress": "0x5d65567792531df947696ca9b826d05206e50120"
+  "agentAddress": "0x96856e94a89c1a15771b73b985adb598ed5b2c6a",
+  "voteTokenAddress": "0x71850b7e9ee3f13ab46d67167341e4bdc905eef9",
+  "convictionVotingProxy": "0xb272437f8629ef4aef084edfdaae0214f7718727",
+  "arbitrator": "0x03EB9E299E76953874C274dC2016cf0C3C2b69D8",
+  "feeToken": "0x71850b7e9ee3f13ab46d67167341e4bdc905eef9",
+  "agreementProxy": "0x5719c0986d64ce7f7911d04c6e4b63b680e68c4e"
 }
