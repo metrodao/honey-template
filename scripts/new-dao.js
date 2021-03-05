@@ -60,8 +60,8 @@ const BRIGHTID_VERIFICATIONS_REQUIRED = 1
 const BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE = ONE_DAY
 
 // Transaction two config
-const ISSUANCE_TARGET_RATIO = 0.2 * ISSUANCE_ONE_HUNDRED_PERCENT // 20% of the total supply
-const ISSUANCE_MAX_ADJUSTMENT_PER_SECOND = ONE_TOKEN
+const ISSUANCE_TARGET_RATIO = 0.3 * ISSUANCE_ONE_HUNDRED_PERCENT // 30% of the total supply
+const ISSUANCE_MAX_ADJUSTMENT_PER_SECOND = 3170979198 // 0.1 / 1 year in seconds adjusted with precision multiplier
 const DECAY = 9999799 // 48 hours halftime. 9999599 = 3 days halftime. halftime_alpha = (1/2)**(1/t)
 const MAX_RATIO = 1000000 // 10 percent
 // const MIN_THRESHOLD = 0.025 // 2.5%
@@ -101,7 +101,7 @@ const networkDependantConfig = {
     VOTE_QUIET_ENDING_EXTENSION: ONE_DAY / 2,
     VOTE_EXECUTION_DELAY: ONE_DAY,
     BRIGHTID_REGISTRATION_PERIOD: ONE_DAY * 30,
-    ARBITRATOR: "0x03EB9E299E76953874C274dC2016cf0C3C2b69D8",
+    ARBITRATOR: "0x44E4fCFed14E1285c9e0F6eae77D5fDd0F196f85",
     STAKING_FACTORY: "0xe71331AEf803BaeC606423B105e4d1C85f012C00",
     FEE_TOKEN: "0x71850b7e9ee3f13ab46d67167341e4bdc905eef9",
     STABLE_TOKEN_ADDRESS: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
@@ -114,8 +114,8 @@ module.exports = async (callback) => {
   try {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
     console.log(`Template address: `, honeyPotTemplate.address)
-    await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
-    // await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config. And stable token address and oracle if not already.
+    // await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
+    await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config. And stable token address and oracle if not already.
   } catch (error) {
     console.log(error)
   }
