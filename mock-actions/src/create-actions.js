@@ -24,7 +24,7 @@ module.exports = async (options = {}) => {
   }
 
   await transferAndApproveBalances(options)
-  await createConvictionVotingActions(beneficiary, agreement, convictionVoting, options)
+  // await createConvictionVotingActions(beneficiary, agreement, convictionVoting, options)
   await createDisputableVotingActions(beneficiary, agreement, disputableVoting, options)
 }
 
@@ -75,21 +75,24 @@ const createConvictionVotingActions = async (beneficiary, agreement, convictionV
 
 const createDisputableVotingActions = async (beneficiary, agreement, disputableVoting, options) => {
   console.log('\nCreating non challenged vote action...')
-  await newVote(agreement, disputableVoting, 'Vote 1')
+  await newVote(agreement, disputableVoting, 'Non challenged vote 1')
 
-  console.log('\nCreating challenged vote action...')
-  const challengedActionId = await newVote(agreement, disputableVoting, 'Vote 2')
-  await challenge(agreement, challengedActionId, 'Challenge context for action 6', options, disputableVoting)
+  console.log('\nCreating non challenged vote action...')
+  await newVote(agreement, disputableVoting, 'Non challenged vote 2')
 
-  console.log('\nCreating settled vote action...')
-  const settledActionId = await newVote(agreement, disputableVoting, 'Vote 3')
-  await challenge(agreement, settledActionId, 'Challenge context for action 7', options, disputableVoting)
-  await settle(agreement, settledActionId)
-
-  console.log('\nCreating disputed vote action...')
-  const disputedActionId = await newVote(agreement, disputableVoting, 'Vote 4')
-  await challenge(agreement, disputedActionId, 'Challenge context for action 8', options, disputableVoting)
-  await dispute(agreement, disputedActionId, options)
+  // console.log('\nCreating challenged vote action...')
+  // const challengedActionId = await newVote(agreement, disputableVoting, 'Vote 2')
+  // await challenge(agreement, challengedActionId, 'Challenge context for action 6', options, disputableVoting)
+  //
+  // console.log('\nCreating settled vote action...')
+  // const settledActionId = await newVote(agreement, disputableVoting, 'Vote 3')
+  // await challenge(agreement, settledActionId, 'Challenge context for action 7', options, disputableVoting)
+  // await settle(agreement, settledActionId)
+  //
+  // console.log('\nCreating disputed vote action...')
+  // const disputedActionId = await newVote(agreement, disputableVoting, 'Vote 4')
+  // await challenge(agreement, disputedActionId, 'Challenge context for action 8', options, disputableVoting)
+  // await dispute(agreement, disputedActionId, options)
 }
 
 async function newVote(agreement, voting, context) {

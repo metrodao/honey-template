@@ -106,9 +106,6 @@ const networkDependantConfig = {
     FEE_TOKEN: "0x71850b7e9ee3f13ab46d67167341e4bdc905eef9",
     STABLE_TOKEN_ADDRESS: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d",
     STABLE_TOKEN_ORACLE: "0x6f38D112b13eda1E3abAFC61E296Be2E27F15071",
-    // FEE_TOKEN: "0x6F937495013C7DC42aF752d3E0BcC090bd34F7AB", // TEMP XDAI TOKEN FROM CELESTE
-    // STABLE_TOKEN_ADDRESS: "0x09327b72157cFe804FEEe57dfCEb50A0CA1Af26a",
-    // STABLE_TOKEN_ORACLE: "0x8af13Ba3Fe8C4279D868DD0720f989EA03692E29",
     CONVICTION_VOTING_PAUSE_ADMIN: "0x878759bd8c99048352412a787f0f0c75013df863" // Bounty DAO Voting
   }
 }
@@ -118,7 +115,7 @@ module.exports = async (callback) => {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
     console.log(`Template address: `, honeyPotTemplate.address)
     await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
-    await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config. And stable token address and oracle if not already.
+    // await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config. And stable token address and oracle if not already.
   } catch (error) {
     console.log(error)
   }
