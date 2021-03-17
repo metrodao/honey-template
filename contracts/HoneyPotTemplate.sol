@@ -1,10 +1,9 @@
 pragma solidity 0.4.24;
 
 import "@aragon/templates-shared/contracts/BaseTemplate.sol";
-import {IHookedTokenManager as HookedTokenManager} from "./external/IHookedTokenManager.sol";
-import {IIssuance as Issuance} from "./external/IIssuance.sol";
-import {ITollgate as Tollgate} from "./external/ITollgate.sol";
-import {IConvictionVoting as ConvictionVoting} from "./external/IConvictionVoting.sol";
+import "./external/IHookedTokenManager.sol";
+import "./external/IIssuance.sol";
+import "./external/IConvictionVoting.sol";
 import "@1hive/apps-brightid-register/contracts/BrightIdRegister.sol";
 import "./external/Agreement.sol";
 import "./external/DisputableVoting.sol";
@@ -44,17 +43,17 @@ contract HoneyPotTemplate is BaseTemplate {
         ACL acl;
         DisputableVoting disputableVoting;
         Agent fundingPoolAgent;
-        HookedTokenManager hookedTokenManager;
-        Issuance issuance;
+        IHookedTokenManager hookedTokenManager;
+        IIssuance issuance;
         MiniMeToken voteToken;
-        ConvictionVoting convictionVoting;
+        IConvictionVoting convictionVoting;
     }
 
     event DisputableVotingAddress(DisputableVoting disputableVoting);
     event VoteToken(MiniMeToken voteToken);
     event AgentAddress(Agent agentAddress);
-    event HookedTokenManagerAddress(HookedTokenManager hookedTokenManagerAddress);
-    event ConvictionVotingAddress(ConvictionVoting convictionVoting);
+    event HookedTokenManagerAddress(IHookedTokenManager hookedTokenManagerAddress);
+    event ConvictionVotingAddress(IConvictionVoting convictionVoting);
     event BrightIdRegisterAddress(BrightIdRegister brightIdRegister);
     event AgreementAddress(Agreement agreement);
 
@@ -91,7 +90,7 @@ contract HoneyPotTemplate is BaseTemplate {
         MiniMeToken voteToken = _voteToken; // Prevents stack too deep error.
         DisputableVoting disputableVoting = _installDisputableVotingApp(dao, voteToken, _disputableVotingSettings);
         BrightIdRegister brightIdRegister = _installBrightIdRegister(dao, acl, disputableVoting, _1hiveContext, _verifiers, _brightIdSettings);
-        HookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken);
+        IHookedTokenManager hookedTokenManager = _installHookedTokenManagerApp(dao, voteToken);
 
         _createDisputableVotingPermissions(acl, disputableVoting);
         _createAgentPermissions(acl, agent, disputableVoting, disputableVoting);
@@ -124,14 +123,14 @@ contract HoneyPotTemplate is BaseTemplate {
         ACL acl,
         DisputableVoting disputableVoting,
         Agent fundingPoolAgent,
-        HookedTokenManager hookedTokenManager,
+        IHookedTokenManager hookedTokenManager,
         MiniMeToken voteToken) = _getDeployedContractsTxOne();
 
-        Issuance issuance = _installIssuance(dao, hookedTokenManager, fundingPoolAgent, _issuanceSettings);
+        IIssuance issuance = _installIssuance(dao, hookedTokenManager, fundingPoolAgent, _issuanceSettings);
         _createIssuancePermissions(acl, issuance, disputableVoting);
         _createHookedTokenManagerPermissions(acl, disputableVoting, hookedTokenManager, issuance);
 
-        ConvictionVoting convictionVoting = _installConvictionVoting(dao, MiniMeToken(hookedTokenManager.token()),
+        IConvictionVoting convictionVoting = _installConvictionVoting(dao, MiniMeToken(hookedTokenManager.token()),
             _stableToken, _setupAddresses[0], fundingPoolAgent, _convictionSettings);
         _createConvictionVotingPermissions(acl, convictionVoting, disputableVoting, _setupAddresses[1]);
         _createVaultPermissions(acl, fundingPoolAgent, convictionVoting, disputableVoting);
@@ -163,7 +162,7 @@ contract HoneyPotTemplate is BaseTemplate {
         (Kernel dao,
         ACL acl,
         DisputableVoting disputableVoting,,,) = _getDeployedContractsTxOne();
-        ConvictionVoting convictionVoting = _getDeployedContractsTxTwo();
+        IConvictionVoting convictionVoting = _getDeployedContractsTxTwo();
 
         Agreement agreement = _installAgreementApp(dao, _arbitrator, _setAppFeesCashier, _title, _content, _stakingFactory);
         _createAgreementPermissions(acl, agreement, disputableVoting, disputableVoting);
@@ -174,7 +173,7 @@ contract HoneyPotTemplate is BaseTemplate {
         agreement.activate(convictionVoting, _feeToken, _challengeDuration, _convictionVotingFees[0], _convictionVotingFees[1]);
         _removePermissionFromTemplate(acl, agreement, agreement.MANAGE_DISPUTABLE_ROLE());
 
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, msg.sender);
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, disputableVoting);
 //        _validateId(_id);
 //        _registerID(_id, dao);
         _deleteStoredContracts();
@@ -185,8 +184,8 @@ contract HoneyPotTemplate is BaseTemplate {
 
     // App installation/setup functions //
 
-    function _installHookedTokenManagerApp(Kernel _dao, MiniMeToken _voteToken) internal returns (HookedTokenManager) {
-        HookedTokenManager hookedTokenManager = HookedTokenManager(_installDefaultApp(_dao, HOOKED_TOKEN_MANAGER_APP_ID));
+    function _installHookedTokenManagerApp(Kernel _dao, MiniMeToken _voteToken) internal returns (IHookedTokenManager) {
+        IHookedTokenManager hookedTokenManager = IHookedTokenManager(_installDefaultApp(_dao, HOOKED_TOKEN_MANAGER_APP_ID));
         hookedTokenManager.initialize(_voteToken, TOKEN_TRANSFERABLE, TOKEN_MAX_PER_ACCOUNT);
         emit HookedTokenManagerAddress(hookedTokenManager);
         return hookedTokenManager;
@@ -209,21 +208,21 @@ contract HoneyPotTemplate is BaseTemplate {
 
     function _installIssuance(
         Kernel _dao,
-        HookedTokenManager _hookedTokenManager,
+        IHookedTokenManager _hookedTokenManager,
         Agent _fundingPoolAgent,
         uint256[2] _issuanceSettings
     )
-        internal returns (Issuance)
+        internal returns (IIssuance)
     {
-        Issuance issuance = Issuance(_installNonDefaultApp(_dao, DYNAMIC_ISSUANCE_APP_ID));
+        IIssuance issuance = IIssuance(_installNonDefaultApp(_dao, DYNAMIC_ISSUANCE_APP_ID));
         issuance.initialize(_hookedTokenManager, _fundingPoolAgent, _issuanceSettings[0], _issuanceSettings[1]);
         return issuance;
     }
 
     function _installConvictionVoting(Kernel _dao, MiniMeToken _stakeAndRequestToken, ERC20 _stableToken, address _stableTokenOracle, Agent _agent, uint64[4] _convictionSettings)
-        internal returns (ConvictionVoting)
+        internal returns (IConvictionVoting)
     {
-        ConvictionVoting convictionVoting = ConvictionVoting(_installNonDefaultApp(_dao, CONVICTION_VOTING_APP_ID));
+        IConvictionVoting convictionVoting = IConvictionVoting(_installNonDefaultApp(_dao, CONVICTION_VOTING_APP_ID));
         convictionVoting.initialize(_stakeAndRequestToken, _stakeAndRequestToken, _stableToken, _stableTokenOracle, _agent, _convictionSettings[0], _convictionSettings[1], _convictionSettings[2], _convictionSettings[3]);
         emit ConvictionVotingAddress(convictionVoting);
         return convictionVoting;
@@ -262,11 +261,11 @@ contract HoneyPotTemplate is BaseTemplate {
         _acl.createPermission(_disputableVoting, _disputableVoting, _disputableVoting.CHANGE_EXECUTION_DELAY_ROLE(), _disputableVoting);
     }
 
-    function _createIssuancePermissions(ACL _acl, Issuance _issuance, DisputableVoting _disputableVoting) internal {
+    function _createIssuancePermissions(ACL _acl, IIssuance _issuance, DisputableVoting _disputableVoting) internal {
         _acl.createPermission(_disputableVoting, _issuance, _issuance.UPDATE_SETTINGS_ROLE(), _disputableVoting);
     }
 
-    function _createConvictionVotingPermissions(ACL _acl, ConvictionVoting _convictionVoting, DisputableVoting _disputableVoting, address _pauseAdmin)
+    function _createConvictionVotingPermissions(ACL _acl, IConvictionVoting _convictionVoting, DisputableVoting _disputableVoting, address _pauseAdmin)
         internal
     {
         _acl.createPermission(ANY_ENTITY, _convictionVoting, _convictionVoting.CHALLENGE_ROLE(), _disputableVoting);
@@ -276,7 +275,7 @@ contract HoneyPotTemplate is BaseTemplate {
         _acl.createPermission(_disputableVoting, _convictionVoting, _convictionVoting.UPDATE_SETTINGS_ROLE(), _disputableVoting);
     }
 
-    function _createHookedTokenManagerPermissions(ACL acl, DisputableVoting disputableVoting, HookedTokenManager hookedTokenManager, Issuance issuance) internal {
+    function _createHookedTokenManagerPermissions(ACL acl, DisputableVoting disputableVoting, IHookedTokenManager hookedTokenManager, IIssuance issuance) internal {
         acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.MINT_ROLE(), disputableVoting);
         acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.BURN_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), disputableVoting);
@@ -291,7 +290,7 @@ contract HoneyPotTemplate is BaseTemplate {
 
     // Temporary Storage functions //
 
-    function _storeDeployedContractsTxOne(Kernel _dao, ACL _acl, DisputableVoting _disputableVoting, Agent _agent, HookedTokenManager _hookedTokenManager, MiniMeToken _voteToken)
+    function _storeDeployedContractsTxOne(Kernel _dao, ACL _acl, DisputableVoting _disputableVoting, Agent _agent, IHookedTokenManager _hookedTokenManager, MiniMeToken _voteToken)
         internal
     {
         DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
@@ -303,7 +302,7 @@ contract HoneyPotTemplate is BaseTemplate {
         deployedContracts.voteToken = _voteToken;
     }
 
-    function _getDeployedContractsTxOne() internal returns (Kernel, ACL, DisputableVoting, Agent, HookedTokenManager, MiniMeToken voteToken) {
+    function _getDeployedContractsTxOne() internal returns (Kernel, ACL, DisputableVoting, Agent, IHookedTokenManager, MiniMeToken voteToken) {
         DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
         return (
             deployedContracts.dao,
@@ -315,12 +314,12 @@ contract HoneyPotTemplate is BaseTemplate {
         );
     }
 
-    function _storeDeployedContractsTxTwo(ConvictionVoting _convictionVoting) internal {
+    function _storeDeployedContractsTxTwo(IConvictionVoting _convictionVoting) internal {
         DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
         deployedContracts.convictionVoting = _convictionVoting;
     }
 
-    function _getDeployedContractsTxTwo() internal returns (ConvictionVoting) {
+    function _getDeployedContractsTxTwo() internal returns (IConvictionVoting) {
         DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
         return deployedContracts.convictionVoting;
     }

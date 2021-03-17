@@ -87,11 +87,11 @@ const networkDependantConfig = {
     VOTE_QUIET_ENDING_EXTENSION: ONE_MINUTE - 1,
     VOTE_EXECUTION_DELAY: ONE_MINUTE,
     BRIGHTID_REGISTRATION_PERIOD: ONE_DAY,
-    ARBITRATOR: "0x7Ecb121a56BF92442289Dddb89b28A58640e76F5",
+    ARBITRATOR: "0x35e7433141D5f7f2EB7081186f5284dCDD2ccacE",
     STAKING_FACTORY: "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
-    FEE_TOKEN: "0xB0f6D3DA7a277CE9d0cbD91705D936ad8e5f4ea1", // Using HNY token from celeste deployment
-    STABLE_TOKEN_ADDRESS: "0xb81Ec0132a75f78516Eb8A418D1D90d6d120Aa41",
-    STABLE_TOKEN_ORACLE: "0xF0048Ef1fCef06c943b1ce1dF26506c8980A4ece",
+    FEE_TOKEN: "0x3050E20FAbE19f8576865811c9F28e85b96Fa4f9", // Using HNY token from celeste deployment
+    STABLE_TOKEN_ADDRESS: "0x531eab8bB6A2359Fe52CA5d308D85776549a0af9",
+    STABLE_TOKEN_ORACLE: "0xa87F58dBBE3A4D01d7F776e02b4dd3237f598095",
     CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT
   },
   xdai: {
@@ -198,6 +198,7 @@ const finaliseDao = async (honeyPotTemplate) => {
     agreementProxy: agreementProxy
   })
 
+  // const hookedTokenManagerAddress = getHookedTokenManagerAddress()
   // const voteToken = await MiniMeToken.at(getNetworkDependantConfig().FEE_TOKEN);
   // // const voteToken = await MiniMeToken.at(tokenAddress);
   // if ((await voteToken.controller()).toLowerCase() === FROM_ACCOUNT.toLowerCase()) {
@@ -219,5 +220,10 @@ const updateConfigFile = (addedConfig) => {
     ...addedConfig
   }
   fs.writeFileSync(path.resolve(__dirname, configFilePath()), JSON.stringify(newConfig))
+}
+
+const getHookedTokenManagerAddress = () => {
+  currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
+  return currrentConfig.hookedTokenManagerAddress
 }
 
