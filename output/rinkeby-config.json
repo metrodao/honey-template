@@ -3,12 +3,11 @@
   "disputableVotingAddress": "0xaa2656f7955be77dfb26950434783ae1a489210e",
   "brightIdRegisterAddress": "0xd32138014241c0f521e540247fee251f143be8db",
   "hookedTokenManagerAddress": "0xbb8bb52d13a5cf634eea495c8a8b509bdb13de04",
-  "vaultAddress": "0x595a9bf6c9f9204e3dec8fe139041054b0de6a84",
   "agentAddress": "0xdd2bdbdf0a3e585f5ef3c2a532f1eed047dfe4b5",
   "voteTokenAddress": "0x3050e20fabe19f8576865811c9f28e85b96fa4f9",
   "convictionVotingProxy": "0x0cc6f0962b415788a5dca32354b5da7dedf21399",
   "arbitrator": "0x35e7433141D5f7f2EB7081186f5284dCDD2ccacE",
   "feeToken": "0x3050E20FAbE19f8576865811c9F28e85b96Fa4f9",
-  "agreementProxy": "0x15d99c0ba7cd951a9cadeb9bff4d603a1af23c3c",
-  "stakingFactory": "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC"
+  "stakingFactory": "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
+  "agreementProxy": "0x15d99c0ba7cd951a9cadeb9bff4d603a1af23c3c"
 }

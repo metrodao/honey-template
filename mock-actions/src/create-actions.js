@@ -77,9 +77,6 @@ const createDisputableVotingActions = async (beneficiary, agreement, disputableV
   console.log('\nCreating non challenged vote action...')
   await newVote(agreement, disputableVoting, 'Non challenged vote 1')
 
-  console.log('\nCreating non challenged vote action...')
-  await newVote(agreement, disputableVoting, 'Non challenged vote 2')
-
   // console.log('\nCreating challenged vote action...')
   // const challengedActionId = await newVote(agreement, disputableVoting, 'Vote 2')
   // await challenge(agreement, challengedActionId, 'Challenge context for action 6', options, disputableVoting)
