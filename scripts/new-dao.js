@@ -214,7 +214,7 @@ const finaliseDao = async (honeyPotTemplate) => {
 }
 
 const updateConfigFile = (addedConfig) => {
-  currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
+  const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
   newConfig = {
     ...currentConfig,
     ...addedConfig
@@ -223,7 +223,7 @@ const updateConfigFile = (addedConfig) => {
 }
 
 const getHookedTokenManagerAddress = () => {
-  currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
-  return currrentConfig.hookedTokenManagerAddress
+  const currentConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, configFilePath())).toString())
+  return currentConfig.hookedTokenManagerAddress
 }
 
