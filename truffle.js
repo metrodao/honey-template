@@ -78,6 +78,12 @@ module.exports = {
       gas: 12000000,
       gasPrice: 1000000000
     },
+    arbtest: {
+      network_id: "*",
+      provider: providerForNetwork("arbtest"),
+      gasPrice: 0,
+      gas: 700e6
+    },
     rinkeby: {
       network_id: 4,
       provider: providerForNetwork('rinkeby'),
@@ -101,7 +107,7 @@ module.exports = {
   solc: {
     optimizer: {
       enabled: true,
-      runs: 10000,
+      runs: 20000,
     }
   }
 }

@@ -16,7 +16,7 @@ const getLogParameter = (receipt, log, parameter) => receipt.logs.find(x => x.ev
 
 const network = () => argValue(NETWORK_ARG, "local")
 const daoId = () => argValue(DAO_ID_ARG, DAO_ID)
-const configFilePath = () => network() === "rinkeby" ? '../output/rinkeby-config.json' : '../output/xdai-config.json'
+const configFilePath = () => `../output/${network()}-config.json`
 
 const honeyTemplateAddress = () => {
   if (network() === "rinkeby") {
@@ -28,6 +28,9 @@ const honeyTemplateAddress = () => {
   } else if (network() === "xdai") {
     const Arapp = require("../arapp")
     return Arapp.environments.xdai.address
+  } else if (network() === "arbtest") {
+    const Arapp = require("../arapp")
+    return Arapp.environments.arbtest.address
   } else {
     const Arapp = require("../arapp_local")
     return Arapp.environments.devnet.address
@@ -39,6 +42,8 @@ const getNetworkDependantConfig = () => {
     return networkDependantConfig.rinkeby
   } else if (network() === "xdai") {
     return networkDependantConfig.xdai
+  } else if (network() === "arbtest") {
+    return networkDependantConfig.arbtest
   }
 }
 
@@ -92,6 +97,20 @@ const networkDependantConfig = {
     FEE_TOKEN: "0x3050E20FAbE19f8576865811c9F28e85b96Fa4f9", // Using HNY token from celeste deployment
     STABLE_TOKEN_ADDRESS: "0x531eab8bB6A2359Fe52CA5d308D85776549a0af9",
     STABLE_TOKEN_ORACLE: "0xa87F58dBBE3A4D01d7F776e02b4dd3237f598095",
+    CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT
+  },
+  arbtest: {
+    VOTE_DURATION: ONE_MINUTE * 3,
+    VOTE_DELEGATED_VOTING_PERIOD: ONE_MINUTE * 2,
+    VOTE_QUIET_ENDING_PERIOD: ONE_MINUTE,
+    VOTE_QUIET_ENDING_EXTENSION: ONE_MINUTE - 1,
+    VOTE_EXECUTION_DELAY: ONE_MINUTE,
+    BRIGHTID_REGISTRATION_PERIOD: ONE_DAY,
+    ARBITRATOR: "0x41A67fc74983353A4a443A9D80500F7655A40DfA",
+    STAKING_FACTORY: "0x2038976E96cDe0187820Bd84e6b36D595e979bD9",
+    FEE_TOKEN: "0x230D3B7D94d838086c88B1D195Bd41BC5DBfE1A5", // Using HNY token from celeste deployment
+    STABLE_TOKEN_ADDRESS: "0x205F76D6dDD95D7bA53b131506EA851B04568899",
+    STABLE_TOKEN_ORACLE: "0x0Cb61941f07aEB908A5991fE8a74a4B13a9404Ae",
     CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT
   },
   xdai: {
