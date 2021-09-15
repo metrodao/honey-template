@@ -60,7 +60,7 @@ const ONE_MINUTE = 60
 const VOTE_SUPPORT_REQUIRED = pct16(50) // 50%
 const VOTE_MIN_ACCEPTANCE_QUORUM = pct16(10) // 10%
 const BRIGHTID_1HIVE_CONTEXT = "0x3168697665000000000000000000000000000000000000000000000000000000"
-const BRIGHTID_VERIFIER_ADDRESSES = ["0x7A2122Dd08D80Ce6c52AbB623D41777BA8b1F36F"]
+const BRIGHTID_VERIFIER_ADDRESSES = ["0xb1d71F62bEe34E9Fc349234C201090c33BCdF6DB"] // Official BrightId node address, not 1Hive's
 const BRIGHTID_VERIFICATIONS_REQUIRED = 1
 const BRIGHTID_VERIFICATION_TIMESTAMP_VARIANCE = ONE_DAY
 
@@ -76,13 +76,13 @@ const MIN_THRESHOLD_STAKE_PERCENTAGE = 0.2 * ONE_HUNDRED_PERCENT
 const CONVICTION_SETTINGS = [DECAY, MAX_RATIO, WEIGHT, MIN_THRESHOLD_STAKE_PERCENTAGE]
 
 // Transaction three config
-const SET_APP_FEES_CASHIER = false
 const AGREEMENT_TITLE = "1Hive Community Covenant"
 const AGREEMENT_CONTENT = "ipfs:QmfWppqC55Xc7PU48vei2XvVAuH76z2rNFF7JMUhjVM5xV"
 const CHALLENGE_DURATION = 3 * ONE_DAY
 const ACTION_AMOUNT = 0.1 * ONE_TOKEN
 const CHALLENGE_AMOUNT = 0.1 * ONE_TOKEN
-const CONVICTION_VOTING_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
+const DISPUTABLE_FEES = [ACTION_AMOUNT, CHALLENGE_AMOUNT]
+const DISPUTABLE_FEES_STABLE = [100, 100]
 
 const networkDependantConfig = {
   rinkeby: {
@@ -92,12 +92,14 @@ const networkDependantConfig = {
     VOTE_QUIET_ENDING_EXTENSION: ONE_MINUTE - 1,
     VOTE_EXECUTION_DELAY: ONE_MINUTE,
     BRIGHTID_REGISTRATION_PERIOD: ONE_DAY,
-    ARBITRATOR: "0x35e7433141D5f7f2EB7081186f5284dCDD2ccacE",
     STAKING_FACTORY: "0xE376a7bbD20Ba75616D6a9d0A8468195a5d695FC",
     FEE_TOKEN: "0x3050E20FAbE19f8576865811c9F28e85b96Fa4f9", // Using HNY token from celeste deployment
     STABLE_TOKEN_ADDRESS: "0x531eab8bB6A2359Fe52CA5d308D85776549a0af9",
     STABLE_TOKEN_ORACLE: "0xa87F58dBBE3A4D01d7F776e02b4dd3237f598095",
-    CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT
+    CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT,
+    COLLATERAL_REQUIREMENT_UPDATER_FACTORY: '0x4c4B2EE79D42d21E76045b0d7B2f9DD0e951F4Ed',
+    ARBITRATOR: "0x35e7433141D5f7f2EB7081186f5284dCDD2ccacE",
+    L1_ISSUANCE: "0x0000000000000000000000000000000000000000"
   },
   arbtest: {
     VOTE_DURATION: ONE_MINUTE * 3,
@@ -106,12 +108,14 @@ const networkDependantConfig = {
     VOTE_QUIET_ENDING_EXTENSION: ONE_MINUTE - 1,
     VOTE_EXECUTION_DELAY: ONE_MINUTE,
     BRIGHTID_REGISTRATION_PERIOD: ONE_DAY,
-    ARBITRATOR: "0x41A67fc74983353A4a443A9D80500F7655A40DfA",
     STAKING_FACTORY: "0x2038976E96cDe0187820Bd84e6b36D595e979bD9",
-    FEE_TOKEN: "0x230D3B7D94d838086c88B1D195Bd41BC5DBfE1A5", // Using HNY token from celeste deployment
+    FEE_TOKEN: "0x0Ea93430B405595e7ae22b1D4BBedED0DDA13b2E",
     STABLE_TOKEN_ADDRESS: "0x205F76D6dDD95D7bA53b131506EA851B04568899",
-    STABLE_TOKEN_ORACLE: "0x0Cb61941f07aEB908A5991fE8a74a4B13a9404Ae",
-    CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT
+    STABLE_TOKEN_ORACLE: "0x0eb000e89004b345cf1Dd92E7a3f408beEfe3740",
+    CONVICTION_VOTING_PAUSE_ADMIN: FROM_ACCOUNT,
+    COLLATERAL_REQUIREMENT_UPDATER_FACTORY: '0xf674e14c3c1488F7d259907438f15d38A143dEF1',
+    ARBITRATOR: "0xa268dFd49E633C68933d7fc77fa99a867C0B86BB",
+    L1_ISSUANCE: "0x2Fa452EdE04bADd49bD46006D07DF03Ce77Dd59B" // Is actually 0x0000000000000000000000000000000000000000
   },
   xdai: {
     VOTE_DURATION: ONE_DAY * 5,
@@ -133,8 +137,12 @@ module.exports = async (callback) => {
   try {
     const honeyPotTemplate = await HoneyPotTemplate.at(honeyTemplateAddress())
     console.log(`Template address: `, honeyPotTemplate.address)
-    // await createDao(honeyPotTemplate) // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe Celeste governers.
-    await finaliseDao(honeyPotTemplate) // Before doing this copy the celeste/arbitrator address into the relevant config. And stable token address and oracle if not already.
+    // After doing this copy the necessary addresses into the Celeste deployment config. Atleast BrightIdRegister maybe
+    // Celeste governers. Also deploy L1 Issuance.
+    await createDao(honeyPotTemplate)
+
+    // Before doing this copy the celeste/arbitrator address and L1 Issuance into the relevant config.
+    await finaliseDao(honeyPotTemplate)
   } catch (error) {
     console.log(error)
   }
@@ -186,25 +194,29 @@ const finaliseDao = async (honeyPotTemplate) => {
   const createDaoTxTwoReceipt = await honeyPotTemplate.createDaoTxTwo(
     [ISSUANCE_TARGET_RATIO, ISSUANCE_MAX_ADJUSTMENT_PER_SECOND],
     getNetworkDependantConfig().STABLE_TOKEN_ADDRESS,
-    [getNetworkDependantConfig().STABLE_TOKEN_ORACLE, getNetworkDependantConfig().CONVICTION_VOTING_PAUSE_ADMIN],
+    [getNetworkDependantConfig().STABLE_TOKEN_ORACLE, getNetworkDependantConfig().CONVICTION_VOTING_PAUSE_ADMIN,
+      getNetworkDependantConfig().L1_ISSUANCE],
     CONVICTION_SETTINGS
   )
 
   const convictionVotingProxy = getLogParameter(createDaoTxTwoReceipt, "ConvictionVotingAddress", "convictionVoting")
+  const issuanceAddress = getLogParameter(createDaoTxTwoReceipt, "IssuanceAddress", "issuanceAddress")
   console.log(`Tx Two Complete.
       Conviction Voting address: ${ convictionVotingProxy }
+      Issuance address: ${ issuanceAddress }
       Gas used: ${ createDaoTxTwoReceipt.receipt.gasUsed }`)
-  updateConfigFile({ convictionVotingProxy: convictionVotingProxy })
+  updateConfigFile({ convictionVotingProxy: convictionVotingProxy, issuanceAddress: issuanceAddress })
 
   const createDaoTxThreeReceipt = await honeyPotTemplate.createDaoTxThree(
     getNetworkDependantConfig().ARBITRATOR,
-    SET_APP_FEES_CASHIER,
     AGREEMENT_TITLE,
     AGREEMENT_CONTENT,
     getNetworkDependantConfig().STAKING_FACTORY,
     getNetworkDependantConfig().FEE_TOKEN,
     CHALLENGE_DURATION,
-    CONVICTION_VOTING_FEES
+    DISPUTABLE_FEES,
+    DISPUTABLE_FEES_STABLE,
+    getNetworkDependantConfig().COLLATERAL_REQUIREMENT_UPDATER_FACTORY
   )
 
   const agreementProxy = getLogParameter(createDaoTxThreeReceipt, "AgreementAddress", "agreement")

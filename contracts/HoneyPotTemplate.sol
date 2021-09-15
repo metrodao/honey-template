@@ -7,6 +7,7 @@ import "./external/IConvictionVoting.sol";
 import "@1hive/apps-brightid-register/contracts/BrightIdRegister.sol";
 import "./external/Agreement.sol";
 import "./external/DisputableVoting.sol";
+import "./external/CollateralRequirementUpdaterFactory.sol";
 
 contract HoneyPotTemplate is BaseTemplate {
 
@@ -52,12 +53,16 @@ contract HoneyPotTemplate is BaseTemplate {
     event DisputableVotingAddress(DisputableVoting disputableVoting);
     event VoteToken(MiniMeToken voteToken);
     event AgentAddress(Agent agentAddress);
+    event IssuanceAddress(IIssuance issuanceAddress);
     event HookedTokenManagerAddress(IHookedTokenManager hookedTokenManagerAddress);
     event ConvictionVotingAddress(IConvictionVoting convictionVoting);
     event BrightIdRegisterAddress(BrightIdRegister brightIdRegister);
     event AgreementAddress(Agreement agreement);
+    event CollateralRequirementUpdater(address collateralRequirementUpdater);
 
     mapping(address => DeployedContracts) internal senderDeployedContracts;
+    address[] private disputables; // Used to prevent stack too deep error
+    address[] private collateralTokens; // Used to prevent stack too deep error
 
     constructor(DAOFactory _daoFactory, ENS _ens, MiniMeTokenFactory _miniMeFactory, IFIFSResolvingRegistrar _aragonID)
         BaseTemplate(_daoFactory, _ens, _miniMeFactory, _aragonID) public
@@ -106,13 +111,14 @@ contract HoneyPotTemplate is BaseTemplate {
     /**
     * @dev Add and initialise issuance and conviction voting
     * @param _issuanceSettings Array of issuance settings: [targetRatio, maxAdjustmentRatioPerSecond]
-    * @param _setupAddresses Array of addresses: [stableTokenOracle, convictionVotingPauseAdmin]
+    * @param _stableToken Stable token
+    * @param _setupAddresses Array of addresses: [stableTokenOracle, convictionVotingPauseAdmin, l1Issuance]
     * @param _convictionSettings array of conviction settings: [decay, max_ratio, weight, min_threshold_stake_percentage]
     */
     function createDaoTxTwo(
         uint256[2] _issuanceSettings,
         ERC20 _stableToken,
-        address[2] _setupAddresses,
+        address[3] _setupAddresses,
         uint64[4] _convictionSettings
     )
         public
@@ -123,10 +129,9 @@ contract HoneyPotTemplate is BaseTemplate {
         ACL acl,
         DisputableVoting disputableVoting,
         Agent fundingPoolAgent,
-        IHookedTokenManager hookedTokenManager,
-        MiniMeToken voteToken) = _getDeployedContractsTxOne();
+        IHookedTokenManager hookedTokenManager,) = _getDeployedContractsTxOne();
 
-        IIssuance issuance = _installIssuance(dao, hookedTokenManager, fundingPoolAgent, _issuanceSettings);
+        IIssuance issuance = _installIssuance(dao, hookedTokenManager, fundingPoolAgent, _setupAddresses[2], _issuanceSettings);
         _createIssuancePermissions(acl, issuance, disputableVoting);
         _createHookedTokenManagerPermissions(acl, disputableVoting, hookedTokenManager, issuance);
 
@@ -147,40 +152,58 @@ contract HoneyPotTemplate is BaseTemplate {
     */
     function createDaoTxThree(
         address _arbitrator,
-        bool _setAppFeesCashier,
         string _title,
         bytes memory _content,
         address _stakingFactory,
         address _feeToken,
         uint64 _challengeDuration,
-        uint256[2] _convictionVotingFees
+        uint256[2] _disputableFees,
+        uint256[] _disputableFeesStable,
+        CollateralRequirementUpdaterFactory _collateralRequirementUpdaterFactory
     )
         public
     {
         require(senderDeployedContracts[msg.sender].hookedTokenManager.hasInitialized(), ERROR_NO_CACHE);
 
-        (Kernel dao,
-        ACL acl,
-        DisputableVoting disputableVoting,,,) = _getDeployedContractsTxOne();
+        (,, DisputableVoting disputableVoting,,,) = _getDeployedContractsTxOne();
         IConvictionVoting convictionVoting = _getDeployedContractsTxTwo();
 
-        Agreement agreement = _installAgreementApp(dao, _arbitrator, _setAppFeesCashier, _title, _content, _stakingFactory);
-        _createAgreementPermissions(acl, agreement, disputableVoting, disputableVoting);
-        acl.createPermission(agreement, disputableVoting, disputableVoting.SET_AGREEMENT_ROLE(), disputableVoting);
-        acl.createPermission(agreement, convictionVoting, convictionVoting.SET_AGREEMENT_ROLE(), disputableVoting);
+        Agreement agreement = _installAgreementApp(_getDao(), _arbitrator, false, _title, _content, _stakingFactory);
+        _createAgreementPermissions(_getAcl(), agreement, disputableVoting, disputableVoting);
+        _getAcl().createPermission(agreement, disputableVoting, disputableVoting.SET_AGREEMENT_ROLE(), disputableVoting);
+        _getAcl().createPermission(agreement, convictionVoting, convictionVoting.SET_AGREEMENT_ROLE(), disputableVoting);
 
-        agreement.activate(disputableVoting, _feeToken, _challengeDuration, _convictionVotingFees[0], _convictionVotingFees[1]);
-        agreement.activate(convictionVoting, _feeToken, _challengeDuration, _convictionVotingFees[0], _convictionVotingFees[1]);
-        _removePermissionFromTemplate(acl, agreement, agreement.MANAGE_DISPUTABLE_ROLE());
+        agreement.activate(disputableVoting, _feeToken, _challengeDuration, _disputableFees[0], _disputableFees[1]);
+        agreement.activate(convictionVoting, _feeToken, _challengeDuration, _disputableFees[0], _disputableFees[1]);
+        _removePermissionFromTemplate(_getAcl(), agreement, agreement.MANAGE_DISPUTABLE_ROLE());
 
-        _transferRootPermissionsFromTemplateAndFinalizeDAO(dao, disputableVoting);
+        delete disputables;
+        disputables.push(disputableVoting);
+        disputables.push(convictionVoting);
+
+        delete collateralTokens;
+        collateralTokens.push(_feeToken);
+        collateralTokens.push(_feeToken);
+
+        address collateralRequirementUpdater = _collateralRequirementUpdaterFactory.newCollateralRequirementUpdater(
+            address(agreement),
+            disputables,
+            collateralTokens,
+            _disputableFeesStable,
+            _disputableFeesStable,
+            convictionVoting.stableTokenOracle(),
+            convictionVoting.stableToken()
+        );
+
+        _transferRootPermissionsFromTemplateAndFinalizeDAO(_getDao(), disputableVoting);
+        // TODO: Uncomment for mainnet?
 //        _validateId(_id);
-//        _registerID(_id, dao);
+//        _registerID(_id, _getDao());
         _deleteStoredContracts();
 
         emit AgreementAddress(agreement);
+        emit CollateralRequirementUpdater(collateralRequirementUpdater);
     }
-
 
     // App installation/setup functions //
 
@@ -210,12 +233,14 @@ contract HoneyPotTemplate is BaseTemplate {
         Kernel _dao,
         IHookedTokenManager _hookedTokenManager,
         Agent _fundingPoolAgent,
+        address _l1Issuance,
         uint256[2] _issuanceSettings
     )
         internal returns (IIssuance)
     {
         IIssuance issuance = IIssuance(_installNonDefaultApp(_dao, DYNAMIC_ISSUANCE_APP_ID));
-        issuance.initialize(_hookedTokenManager, _fundingPoolAgent, _issuanceSettings[0], _issuanceSettings[1]);
+        issuance.initialize(_hookedTokenManager, _fundingPoolAgent, _l1Issuance, _issuanceSettings[0], _issuanceSettings[1]);
+        emit IssuanceAddress(issuance);
         return issuance;
     }
 
@@ -262,7 +287,8 @@ contract HoneyPotTemplate is BaseTemplate {
     }
 
     function _createIssuancePermissions(ACL _acl, IIssuance _issuance, DisputableVoting _disputableVoting) internal {
-        _acl.createPermission(_disputableVoting, _issuance, _issuance.UPDATE_SETTINGS_ROLE(), _disputableVoting);
+        // TODO: Post deployment, update the L1Issuance address in the issuance app and giver permission to disputable voting
+        _acl.createPermission(msg.sender, _issuance, _issuance.UPDATE_SETTINGS_ROLE(), msg.sender);
     }
 
     function _createConvictionVotingPermissions(ACL _acl, IConvictionVoting _convictionVoting, DisputableVoting _disputableVoting, address _pauseAdmin)
@@ -281,6 +307,9 @@ contract HoneyPotTemplate is BaseTemplate {
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ISSUE_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.ASSIGN_ROLE(), disputableVoting);
         // acl.createPermission(issuance, hookedTokenManager, hookedTokenManager.REVOKE_VESTINGS_ROLE(), disputableVoting);
+
+        // TODO: Delete this for mainnet
+        acl.createPermission(msg.sender, hookedTokenManager, hookedTokenManager.CHANGE_CONTROLLER_ROLE(), msg.sender);
     }
 
     function _createAgreementPermissions(ACL _acl, Agreement _agreement, address _grantee, address _manager) internal {
@@ -322,6 +351,14 @@ contract HoneyPotTemplate is BaseTemplate {
     function _getDeployedContractsTxTwo() internal returns (IConvictionVoting) {
         DeployedContracts storage deployedContracts = senderDeployedContracts[msg.sender];
         return deployedContracts.convictionVoting;
+    }
+
+    function _getDao() internal returns (Kernel) {
+        return senderDeployedContracts[msg.sender].dao;
+    }
+
+    function _getAcl() internal returns (ACL) {
+        return senderDeployedContracts[msg.sender].acl;
     }
 
     function _deleteStoredContracts() internal {

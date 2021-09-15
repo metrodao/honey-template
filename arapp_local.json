@@ -2,9 +2,9 @@
   "environments": {
     "devnet": {
       "appName": "honey-pot-template.aragonpm.eth",
+      "address": "0xefc5f9d0fda35bb101d1b01ecfcec862f632837e",
       "network": "devnet",
-      "registry": "0xaafca6b0c89521752e559650206d7c925fd0e530",
-      "wsRPC": "wss://devnet.eth.aragon.network/ws"
+      "registry": "0x73ddD4B38982aB515daCf43289B41706f9A39199"
     }
   },
   "path": "contracts/HoneyPotTemplate.sol"

@@ -7,6 +7,7 @@ contract IIssuance {
     function initialize(
         address _commonPoolTokenManager,
         address _commonPoolVault,
+        address _l1Issuance,
         uint256 _targetRatio,
         uint256 _maxAdjustmentRatioPerSecond
     );

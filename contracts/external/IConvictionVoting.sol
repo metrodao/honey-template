@@ -12,6 +12,9 @@ contract IConvictionVoting {
     bytes32 constant public CREATE_PROPOSALS_ROLE = keccak256("CREATE_PROPOSALS_ROLE");
     bytes32 constant public CANCEL_PROPOSALS_ROLE = keccak256("CANCEL_PROPOSALS_ROLE");
 
+    address public stableToken;
+    address public stableTokenOracle;
+
     function initialize(
         MiniMeToken _stakeToken,
         address _requestToken,
